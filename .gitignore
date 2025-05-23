@@ -31,3 +31,5 @@ folders.json
 *.log
 *.out
 *.synctex.gz
+
+!examples/part_16_reel.mp4
