@@ -41,6 +41,8 @@ def parser():
         cmd.add_argument("--roi", type=roi_arg, help="Fixed ROI in the resized 540x960 frame")
         cmd.add_argument("--circle-roi", type=roi_arg, default=(10, 560, 69, 250))
         cmd.add_argument("--lang", nargs="+", default=["en", "pl"])
+        cmd.add_argument("--engine", choices=["easyocr", "paddle"], default="easyocr")
+        cmd.add_argument("--paddle-size", choices=["tiny", "small", "medium"], default="small")
         cmd.add_argument("--gpu", action="store_true")
         cmd.add_argument("--sample-fps", type=float, default=20)
         cmd.add_argument("--min-votes", type=int, default=11)
@@ -52,7 +54,11 @@ def parser():
         cmd.add_argument("--screenshots", action="store_true")
         cmd.add_argument("--excel", action="store_true", help="Also save an Excel review workbook")
         cmd.add_argument("--model-dir", type=Path)
-        cmd.add_argument("--offline", action="store_true", help="Disallow EasyOCR model downloads")
+        cmd.add_argument("--offline", action="store_true", help="Require local OCR model files")
+    review = commands.add_parser("review", help="Open saved results in an editable local review")
+    review.add_argument("folder", type=Path)
+    review.add_argument("--port", type=int, default=0, help="0 chooses a free local port")
+    review.add_argument("--no-open", action="store_true")
     manifest = commands.add_parser("manifest", help="List all folders containing video files")
     manifest.add_argument("input", type=Path)
     manifest.add_argument("--output", type=Path, required=True)
@@ -94,12 +100,14 @@ def run(args):
         except ImportError as exc:
             raise RuntimeError('Excel export needs: python -m pip install ".[excel]"') from exc
     # Initialise once per job, not at import and not once per video.
-    reader = make_reader(config, args.model_dir, not args.offline)
+    reader = make_reader(config, args.model_dir, not args.offline, args.engine, args.paddle_size)
     destination.mkdir(parents=True)
     metadata = {"version": __version__, "created_utc": datetime.now(timezone.utc).isoformat(),
                 "config": asdict(config), "requested_layout": args.layout,
-                "source": str(source), "video_count": len(videos), "dependencies": {}}
-    for name in ("easyocr", "torch", "opencv-python-headless", "numpy"):
+                "source": str(source), "video_count": len(videos), "dependencies": {},
+                "engine": args.engine, "paddle_size": args.paddle_size if args.engine == "paddle" else None,
+                "paddle_mkldnn": False if args.engine == "paddle" else None}
+    for name in ("easyocr", "torch", "opencv-python-headless", "opencv-contrib-python", "numpy", "paddleocr", "paddlepaddle", "paddlex"):
         try:
             metadata["dependencies"][name] = importlib.metadata.version(name)
         except importlib.metadata.PackageNotFoundError:
@@ -128,6 +136,10 @@ def run(args):
                 except Exception as exc:
                     row = {"path": str(video), "status": "error", "needs_review": True,
                            "review_reasons": ["processing_error"], "error": f"{type(exc).__name__}: {exc}"}
+                for shot in row.get("screenshots", []):
+                    for key in ("path", "full_path"):
+                        if key in shot:
+                            shot[key] = Path(shot[key]).resolve().relative_to(destination.resolve()).as_posix()
                 stream.write(json.dumps(row, ensure_ascii=False) + "\n")
                 stream.flush()
                 # Frame observations are already durable in JSONL; keep only summaries in RAM.
@@ -152,6 +164,9 @@ def run(args):
 def main(argv=None):
     args = parser().parse_args(argv)
     try:
+        if args.command == "review":
+            from .review import serve
+            return serve(args.folder, args.port, not args.no_open)
         if args.command == "manifest":
             folders = make_manifest(args.input)
             if not folders:

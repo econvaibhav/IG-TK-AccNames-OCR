@@ -61,7 +61,12 @@ def crop_frame(frame, config):
     return frame, crop, box
 
 
-def make_reader(config, model_directory=None, download_enabled=True):
+def make_reader(config, model_directory=None, download_enabled=True, engine="easyocr", paddle_size="small"):
+    if engine == "paddle":
+        from .engines import PaddleReader
+        return PaddleReader(config, paddle_size, model_directory, download_enabled)
+    if engine != "easyocr":
+        raise ValueError(f"Unknown OCR engine: {engine}")
     try:
         import easyocr
     except ImportError as exc:
@@ -70,4 +75,3 @@ def make_reader(config, model_directory=None, download_enabled=True):
     if model_directory:
         kwargs["model_storage_directory"] = str(model_directory)
     return easyocr.Reader(list(config.languages), **kwargs)
-

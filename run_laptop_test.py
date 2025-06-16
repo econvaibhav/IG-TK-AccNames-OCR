@@ -8,7 +8,6 @@ import json
 import os
 from pathlib import Path
 import sys
-import webbrowser
 
 ROOT = Path(__file__).resolve().parent
 SAMPLE = ROOT / "examples" / "part_16_reel.mp4"
@@ -17,32 +16,37 @@ SAMPLE = ROOT / "examples" / "part_16_reel.mp4"
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--video", type=Path, default=SAMPLE, help="Optional replacement clip")
-    parser.add_argument("--no-open", action="store_true", help="Print the HTML path without opening it")
+    parser.add_argument("--no-open", action="store_true", help="Run the review server without opening a browser")
+    parser.add_argument("--no-review", action="store_true", help="Only compute outputs; do not start the review server")
+    parser.add_argument("--engine", choices=["easyocr", "paddle"], default="easyocr")
+    parser.add_argument("--paddle-size", choices=["tiny", "small", "medium"], default="small")
     args = parser.parse_args(argv)
     video = args.video.expanduser().resolve()
     if not video.is_file():
         parser.error(f"Video not found: {video}")
-    missing = [name for name in ("cv2", "easyocr", "torch", "torchvision", "openpyxl")
+    dependencies = ("cv2", "openpyxl") + (("paddleocr", "paddle") if args.engine == "paddle" else ("easyocr", "torch", "torchvision"))
+    missing = [name for name in dependencies
                if importlib.util.find_spec(name) is None]
     if missing:
         print(f"Missing packages: {', '.join(missing)}", file=sys.stderr)
         print("Run bash setup_laptop.sh, then .venv/bin/python run_laptop_test.py", file=sys.stderr)
         return 2
 
-    os.environ.setdefault("OMP_NUM_THREADS", "4")
+    os.environ.setdefault("OMP_NUM_THREADS", "1" if args.engine == "paddle" else "4")
     os.environ.setdefault("MKL_NUM_THREADS", "4")
-    import torch
-    torch.set_num_threads(min(4, max(1, os.cpu_count() or 1)))
+    if args.engine == "easyocr":
+        import torch
+        torch.set_num_threads(min(4, max(1, os.cpu_count() or 1)))
 
     from instagram_ocr.__main__ import main as run_ocr
 
     destination = ROOT / "results" / datetime.now().strftime("laptop_%Y%m%d_%H%M%S_%f")
     print(f"Video: {video.name}", flush=True)
     print("CPU test: 2 samples/second, stop at 3 matching observations per direction.", flush=True)
-    print("At most 12 sampled frames per direction, plus three review screenshots.", flush=True)
-    print("Loading EasyOCR. Its first run downloads the detection and recognition models.", flush=True)
+    print("At most 12 sampled frames per direction, plus six review time points.", flush=True)
+    print(f"Loading {args.engine}. The first run downloads model files.", flush=True)
     code = run_ocr([
-        "run", str(video), "--output", str(destination),
+        "run", str(video), "--output", str(destination), "--engine", args.engine, "--paddle-size", args.paddle_size,
         "--lang", "en", "pl", "--sample-fps", "2", "--min-votes", "3",
         "--vote-margin", "0", "--max-samples", "12", "--screenshots", "--excel",
         "--model-dir", str(ROOT / "models"),
@@ -63,15 +67,11 @@ def main(argv=None):
                 print("Visible reference in the sample: thestoryofourhome.pl", flush=True)
             if row.get("error"):
                 print("Processing error:", row["error"], file=sys.stderr)
-    report = destination / "review.html"
-    if report.is_file():
-        print(f"\nOpen the result: {report}", flush=True)
-        print(f"Excel: {destination / 'results.xlsx'}", flush=True)
-        if not args.no_open:
-            try:
-                webbrowser.open(report.as_uri())
-            except Exception:
-                pass  # The path above is sufficient if no desktop browser is available.
+    if (destination / "review.html").is_file():
+        print(f"\nResults: {destination}", flush=True)
+        if not args.no_review:
+            from instagram_ocr.review import serve
+            serve(destination, open_browser=not args.no_open)
     if code:
         print("The run needs attention. Keep the terminal output and the results folder.", file=sys.stderr)
     return code
@@ -79,4 +79,3 @@ def main(argv=None):
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

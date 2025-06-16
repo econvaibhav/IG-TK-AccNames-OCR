@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "instagram-account-ocr"
-version = "0.1.1"
+version = "0.2.0"
 description = "Reviewable account-label extraction from social-media screen recordings"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -12,9 +12,13 @@ dependencies = ["easyocr>=1.7.2,<2", "opencv-python-headless>=4.8,<5", "numpy>=1
 
 [project.optional-dependencies]
 excel = ["openpyxl>=3.1,<4", "Pillow>=10"]
+paddle = ["paddleocr>=3.7,<3.8", "paddlepaddle>=3.2,<4"]
 
 [project.scripts]
 instagram-ocr = "instagram_ocr.__main__:main"
 
 [tool.setuptools.packages.find]
 include = ["instagram_ocr*"]
+
+[tool.setuptools.package-data]
+instagram_ocr = ["static/*.js", "static/*.css"]

@@ -31,5 +31,11 @@ folders.json
 *.log
 *.out
 *.synctex.gz
-
+.review.lock
+# Keep the single supplied example usable after a GitHub checkout.
 !examples/part_16_reel.mp4
+!examples/review_demo/screenshots/
+!examples/review_demo/screenshots/**
+!examples/review_demo/results.xlsx
+!examples/review_demo/reviewed.xlsx
+examples/review_demo/review_state.json
