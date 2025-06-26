@@ -53,14 +53,17 @@ def scan(cap, fps, count, reader, config, reverse=False):
 
 
 def screenshots(cap, fps, count, config, folder):
-    """Save the same 1 s, 3 s and end-minus-1 s evidence as the supplied archive."""
+    """Save legacy time points plus duration quartiles, with full-frame context."""
     cv = cv_module()
     folder.mkdir(parents=True, exist_ok=True)
     saved = []
     duration = count / fps
-    requests = [("1sec", 1.0), ("3sec", 3.0), ("end_minus_1sec", max(0, duration - 1))]
+    requests = [("1sec", 1.0), ("3sec", 3.0), ("end_minus_1sec", max(0, duration - 1)),
+                ("25percent", duration * .25), ("50percent", duration * .5),
+                ("75percent", duration * .75)]
     for label, second in requests:
         if second >= duration:
+            saved.append({"label": label, "error": "outside_clip"})
             continue
         index = min(count - 1, max(0, round(second * fps)))
         cap.set(cv.CAP_PROP_POS_FRAMES, index)
@@ -73,7 +76,11 @@ def screenshots(cap, fps, count, config, folder):
         path = folder / f"{label}{'' if crop is not None else '_no_roi'}.png"
         if not cv.imwrite(str(path), crop if crop is not None else resized):
             raise OSError(f"Could not save screenshot: {path}")
+        full_path = folder / f"{label}_full.jpg"
+        if not cv.imwrite(str(full_path), frame, [cv.IMWRITE_JPEG_QUALITY, 95]):
+            raise OSError(f"Could not save full frame: {full_path}")
         saved.append({"label": label, "frame": index, "seconds": round(index/fps, 4),
+                      "requested_seconds": second, "full_path": str(full_path),
                       "roi_found": crop is not None, "path": str(path), "roi": box})
     return saved
 
@@ -111,4 +118,3 @@ def process_video(path, reader, config, screenshot_root=None):
                 cap, fps, count, config, Path(screenshot_root) / f"{path.stem}_{identity}"
             )
     return result
-
