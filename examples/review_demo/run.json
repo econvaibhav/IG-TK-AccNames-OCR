@@ -1,0 +1,46 @@
+{
+  "version": "0.2.0",
+  "created_utc": "2026-09-27T09:13:22.261512+00:00",
+  "config": {
+    "languages": [
+      "en",
+      "pl"
+    ],
+    "gpu": false,
+    "layout": "reels",
+    "sample_fps": 2.0,
+    "min_votes": 3,
+    "vote_margin": 0,
+    "similarity": 0.8,
+    "min_confidence": 0,
+    "min_duration": 0,
+    "max_samples": 12,
+    "width": 540,
+    "height": 960,
+    "circle_roi": [
+      10,
+      560,
+      69,
+      250
+    ],
+    "crop_size": [
+      380,
+      40
+    ],
+    "fixed_roi": null
+  },
+  "requested_layout": "reels",
+  "source": "examples/part_16_reel.mp4",
+  "video_count": 1,
+  "dependencies": {
+    "easyocr": "1.7.2",
+    "torch": "2.14.0+cpu",
+    "opencv-python-headless": "4.14.0.94",
+    "numpy": "2.3.5",
+    "paddleocr": "3.7.0",
+    "paddlepaddle": "3.3.1",
+    "paddlex": "3.7.2"
+  },
+  "engine": "easyocr",
+  "paddle_size": null
+}
