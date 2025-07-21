@@ -1,91 +1,157 @@
 # Instagram Account OCR
 
-Read account names from Instagram Reels, compare readings from the beginning and
-end of each clip, and inspect the results alongside the cropped video frames.
+Read account handles from recorded Reels, inspect six moments in each clip, and
+save corrections from a local browser into Excel and CSV.
 
-![OCR workflow](visuals/OCR_Workflow.png)
+![Workflow](visuals/OCR_Workflow.png)
 
-## Try it on your Fedora laptop
+## Try the newer model on your Fedora laptop
 
-The included `examples/part_16_reel.mp4` is an unchanged 8.8-second clip from your
-uploaded OCR examples. The visible name is **`thestoryofourhome.pl`**.
-
-Open a terminal in this extracted `instagram-ocr` folder and run:
+The included `examples/part_16_reel.mp4` is your original 8.8-second example.
+Open a terminal in this extracted `instagram-ocr` folder:
 
 ```bash
 sudo dnf install -y python3.12
+bash setup_laptop.sh --paddle
+.venv/bin/python run_laptop_test.py --engine paddle
+```
+
+Setup installs CPU dependencies. The first run downloads the two **PP-OCRv6
+small** models into `models/` (about 30 MB together). Once downloaded, the OCR
+runs locally. No Instagram login or OCR API key is needed.
+
+Keep the terminal open: it starts a local review page and opens your browser.
+If it does not open, copy the `http://127.0.0.1:.../` URL printed in the terminal.
+Press **Ctrl+C** to stop the review; saved corrections remain on disk.
+
+Already installed the previous package? Extract this version into a new folder
+and run setup there. To use the existing EasyOCR option:
+
+```bash
 bash setup_laptop.sh
 .venv/bin/python run_laptop_test.py
 ```
 
-The setup creates a local `.venv` and installs the CPU version of PyTorch,
-EasyOCR, OpenCV and Excel support. The first test also downloads EasyOCR's model
-files into `models/`. Keep the terminal open while this finishes.
+Each test samples two frames per second, stops at three votes per direction,
+and attempts at most twelve frames in each direction. These are quick-test
+settings. Every run computes fresh results in a new `results/laptop_...` folder.
+Use `--no-review` to finish after processing without starting the browser server.
 
-The test samples two frames per second and stops once a name has three votes
-in each direction, with a maximum of twelve samples per direction. These are
-small laptop-test settings. Results are freshly computed from the clip.
+## Try the review immediately
 
-When it finishes, the result opens in your browser. Each run creates a separate
-folder inside `results/` containing:
-
-| File | What to check |
-| --- | --- |
-| `review.html` | Forward and reverse names, vote counts, and three cropped screenshots. |
-| `results.xlsx` | The result table and the 3-second screenshot. |
-| `results.csv` | One row for the clip, including its review status. |
-| `details.jsonl` | Raw OCR text, confidence, frame numbers and crop coordinates. |
-| `run.json` | The settings and installed package versions used for this run. |
-
-Compare the detected name with `thestoryofourhome.pl`, including the dot before
-`pl`. OCR can read punctuation incorrectly even when both directions agree.
-Review flags identify missing readings, disagreements and other cases to inspect.
-
-In the checked CPU run, both passes returned `thestoryofourhome-pl` with three
-votes each. The output was `agreement`, with `needs_review=True` and
-`nonstandard_label` because of the hyphen. Your fresh run may read it differently;
-compare the output with the image rather than treating agreement as accuracy.
-
-To run it again, use `.venv/bin/python run_laptop_test.py`; setup is only needed
-once. If the browser does not open automatically, open the `review.html` path
-printed in the terminal. To send back a useful result, copy the printed
-Candidates, Comparison, Forward and Reverse lines, or share the CSV and crops.
-
-## Try another Reel or a folder
+A real EasyOCR result is included so you can test the correction flow without
+running OCR or downloading models. After setup:
 
 ```bash
-.venv/bin/python run_laptop_test.py --video "/path/to/your/reel.mp4"
+.venv/bin/python -m instagram_ocr review examples/review_demo
+```
+
+Change `thestoryofourhome-pl` to `thestoryofourhome.pl` and save. Check
+`examples/review_demo/reviewed.xlsx` or download it from the page.
+
+## Correct a result
+
+1. Inspect the existing **1 s, 3 s and end − 1 s** views, plus **25%, 50% and 75%**
+   of the clip duration. These are time quartiles. Each has the account crop,
+   full frame, actual timestamp and frame index; click the full frame to enlarge.
+2. Enter the actual handle shown in the images, including dots and underscores.
+   Use commas if more than one account is visible.
+3. Choose **Confirmed**, **Corrected**, or **Cannot read**, add a note if useful,
+   then click **Save correction**. Typing a changed name selects Corrected.
+4. Use **Download Excel** or **CSV**. The same files are also updated directly in
+   that run's folder. If Excel locks the workbook, close it and click
+   **Refresh exports**; the saved correction is retained.
+
+**`final_names` is the reviewed account field.** Check `review_status` alongside
+it. Unreviewed rows still contain the original OCR candidates; Cannot read rows
+have an empty `final_names`. Both remain flagged by `needs_manual_review`.
+The original `status` and `needs_review` columns describe the automatic OCR pass.
+
+This connection runs **review → Excel/CSV**. Editing a downloaded workbook does
+not update the browser. Corrections update the result, not the OCR model.
+
+Reopen a previous run without doing OCR again:
+
+```bash
+.venv/bin/python -m instagram_ocr review results/laptop_YOUR_RUN_FOLDER
+```
+
+Opening `review.html` directly provides a preview. Use the command above for
+saving and downloads. Keep the whole run folder together when moving it.
+
+## What changed with the newer OCR?
+
+[PP-OCRv6](https://github.com/PaddlePaddle/PaddleOCR/releases/tag/v3.7.0) was
+released on **11 June 2026**. The small model is a practical option for this
+laptop experiment; EasyOCR remains the default for existing commands. The
+multilingual recognizer supports English and Polish together.
+
+The checked CPU runs on the supplied clip produced:
+
+| Engine | Forward | Reverse | Visible handle |
+| --- | --- | --- | --- |
+| EasyOCR 1.7.2 | `thestoryofourhome-pl` · 3 votes | `thestoryofourhome-pl` · 3 votes | `thestoryofourhome.pl` |
+| PP-OCRv6 small | `thestoryofourhome.pl` · 3 votes | `thestoryofourhome.pl` · 3 votes | `thestoryofourhome.pl` |
+
+This is one clip, not a general accuracy benchmark. Two agreeing passes can make
+the same punctuation error. The six review images provide evidence independent
+of which frames reached the vote threshold.
+
+PaddleOCR 3.7.0 / PaddlePaddle 3.3.1 were checked on Linux CPU. MKL-DNN is disabled
+in the adapter because its accelerated path failed on this runtime. Other laptop
+platforms and the tiny/medium variants have not been tested here. Model names,
+settings and dependency versions are recorded in `run.json`.
+
+## Your own videos
+
+```bash
+.venv/bin/python run_laptop_test.py --engine paddle --video "/path/to/reel.mp4"
 
 .venv/bin/python -m instagram_ocr run "/path/to/clips" \
-  --output results/my_clips --lang en pl --screenshots --excel
+  --output results/my_clips --engine paddle --model-dir models \
+  --screenshots --excel
+.venv/bin/python -m instagram_ocr review results/my_clips
 ```
 
-The folder command uses the main defaults: 20 requested samples/second and
-11 votes before early stopping. Choose a new output folder for each run.
-Use `--lang en hu` for Hungarian or another EasyOCR-compatible language set.
-The circle crop is tuned to the Reels layout; ordinary feed posts may need
+Folder processing uses 20 requested samples/second and 11 votes per direction.
+Choose a new output folder for each OCR run. Add `--recursive` for subfolders.
+`--paddle-size tiny` or `medium` selects another PP-OCRv6 size; small is the tested
+choice. Use `--offline --model-dir models` when its weights are already present.
+
+The circle crop is tuned to Reels. Other layouts can use
 `--layout fixed --roi x,y,width,height` in the 540 × 960 working frame.
+Fixed times beyond a short clip are marked unavailable. Quartile frames use the
+nearest bounded frame index; constant-frame-rate timing is assumed.
 
-## Edit the diagram
+## Output files
 
-Open `visuals/OCR_Workflow.tex` in Overleaf, or compile it with pdfLaTeX:
+| File | Contents |
+| --- | --- |
+| `review.html`, `review.css`, `review.js` | Local review interface. |
+| `screenshots/` | Six account crops and full frames when available. |
+| `results.csv`, `results.xlsx` | Original OCR results; Excel embeds the 3-second crop. |
+| `details.jsonl` | Original raw text, confidence, frame numbers and crop coordinates. |
+| `run.json` | Engine, settings and installed versions. |
+| `review_state.json` | Saved decisions, names, notes and correction history. |
+| `reviewed.csv`, `reviewed.xlsx` | Original fields plus final names and review status. |
 
-```bash
-pdflatex -interaction=nonstopmode -halt-on-error -output-directory visuals visuals/OCR_Workflow.tex
-```
+The correction and reviewed files appear when you start the review and save.
+Use the search box and Unresolved only filter to work through a larger folder.
 
-The compiled PDF and PNG are already included, so LaTeX is not needed to test OCR.
+## Code and diagram
 
-## Code
-
-`core.py` handles filtering and voting; `vision.py` finds the crop;
-`pipeline.py` processes both directions; `files.py` and `excel.py` export the
-results. The command line is in `instagram_ocr/__main__.py`.
+`core.py` filters and votes; `vision.py` locates crops; `engines.py` adapts PP-OCRv6;
+`pipeline.py` scans and saves frames. `review.py` handles the local server and
+corrections, `review_page.py` renders the page, and `excel.py` writes workbooks.
 
 ```bash
 .venv/bin/python -m unittest discover -s tests -v
+pdflatex -interaction=nonstopmode -halt-on-error -output-directory visuals visuals/OCR_Workflow.tex
 ```
 
-Installation references: [Fedora Python 3.12](https://packages.fedoraproject.org/pkgs/python3.12/python3.12/),
-[PyTorch](https://pytorch.org/get-started/locally/),
-[EasyOCR](https://www.jaided.ai/easyocr/documentation/).
+The PDF and PNG are included. LaTeX is not needed to run OCR. The diagram source
+can also be opened in Overleaf.
+
+References: [PaddleOCR models and Python API](https://github.com/PaddlePaddle/PaddleOCR/blob/main/docs/version3.x/pipeline_usage/OCR.en.md),
+[EasyOCR](https://www.jaided.ai/easyocr/documentation/),
+[PyTorch CPU installation](https://pytorch.org/get-started/locally/).

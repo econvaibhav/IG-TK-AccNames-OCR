@@ -1,71 +1,46 @@
-\documentclass[tikz,border=5mm]{standalone}
+\documentclass[11pt,border=12pt]{standalone}
 \usepackage[T1]{fontenc}
 \usepackage{lmodern}
-\usetikzlibrary{arrows.meta}
-\renewcommand{\familydefault}{\sfdefault}
+\usepackage{amsmath}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,calc}
 \begin{document}
-\begin{tikzpicture}[x=1cm,y=1cm,font=\sffamily,text=black,
-  box/.style={draw=black,fill=white,line width=.6pt},
-  flow/.style={-{Stealth[length=2.3mm,width=1.65mm]},line width=.75pt},
-  heading/.style={font=\bfseries\fontsize{12}{15}\selectfont,align=left},
-  body/.style={font=\fontsize{10.5}{14}\selectfont,align=left},
-  small/.style={font=\fontsize{9.5}{12.5}\selectfont,align=left},
-  column/.style={font=\bfseries\fontsize{10}{13}\selectfont,align=left}]
-\useasboundingbox (0,0) rectangle (24,13.65);
-\fill[white] (0,0) rectangle (24,13.65);
-
-% RECORDING AND CROP
-\draw[box] (.35,9.73) rectangle (8.10,13.3);
-\node[heading,anchor=west] at (.83,12.73) {1\quad Sample the recording};
-\draw[line width=.4pt] (.35,12.22)--(8.10,12.22);
-\node[body,anchor=west,text width=6.6cm] at (.83,11.2)
-  {Open a recorded Instagram Reel.\\Sample frames from the start and the end.\\Resize each frame to $540\times960$ pixels.};
-\node[small,anchor=west] at (.83,10.18) {Laptop test: 2 sampled frames per second.};
-
-\draw[box] (9.20,9.73) rectangle (23.65,13.3);
-\node[heading,anchor=west] at (9.69,12.73) {2\quad Find and crop the account name};
-\draw[line width=.4pt] (9.20,12.22)--(23.65,12.22);
-\node[body,anchor=west] at (9.69,11.76)
-  {Detect a profile-picture circle in the lower-left search region.};
-\draw[line width=.6pt] (10.18,10.87) circle (.25);
-\draw[box] (10.78,10.51) rectangle (17.1,11.24);
-\node[body,anchor=center] at (13.94,10.875) {\texttt{thestoryofourhome.pl}};
-\node[small,anchor=west] at (17.52,10.875) {Crop the text to its right.};
-\node[small,anchor=west] at (9.69,10.08) {If no circle is found, continue to the next sampled frame.};
-\draw[flow] (8.10,11.46)--(9.20,11.46);
-\draw[flow] (16.42,9.73)--(16.42,8.92);
-
-% TWO PASSES SHARE ONE OCR METHOD
-\draw[box] (.35,4.67) rectangle (23.65,8.92);
-\node[heading,anchor=west] at (.83,8.35) {3\quad Read the cropped text in both directions};
-\draw[line width=.4pt] (.35,7.86)--(23.65,7.86);
-\node[column,anchor=west] at (.83,7.43) {Pass};
-\node[column,anchor=west] at (4.62,7.43) {Frame order};
-\node[column,anchor=west] at (11.22,7.43) {EasyOCR and repeated readings};
-\draw[line width=.4pt] (.35,7.02)--(23.65,7.02);
-\draw[line width=.4pt] (4.13,5.57)--(4.13,7.86);
-\draw[line width=.4pt] (10.73,5.57)--(10.73,7.86);
-\node[body,anchor=west] at (.83,6.66) {Forward};
-\node[body,anchor=west] at (4.62,6.66) {Start $\longrightarrow$ later frames};
-\node[body,anchor=west] at (11.22,6.66) {Read names; count one vote per name per frame.};
-\draw[line width=.35pt] (.35,6.3)--(23.65,6.3);
-\node[body,anchor=west] at (.83,5.94) {Reverse};
-\node[body,anchor=west] at (4.62,5.94) {End $\longrightarrow$ earlier frames};
-\node[body,anchor=west] at (11.22,5.94) {Repeat independently from the other end of the clip.};
-\draw[line width=.4pt] (.35,5.57)--(23.65,5.57);
-\node[small,anchor=west] at (.83,5.1)
-  {Laptop test: stop each pass at 3 votes, or after 12 sampled frames. Keep raw text, confidence and frame numbers.};
-\draw[flow] (12,4.67)--(12,3.86);
-
-% COMPARISON AND REVIEW
-\draw[box] (.35,.35) rectangle (23.65,3.86);
-\node[heading,anchor=west] at (.83,3.29) {4\quad Compare the names and inspect the result};
-\draw[line width=.4pt] (.35,2.80)--(23.65,2.80);
-\node[body,anchor=west] at (.83,2.26)
-  {Matching readings: agreement. Different spellings, missing names or weak support: flag for review.};
-\node[body,anchor=west] at (.83,1.58)
-  {Save CSV and JSON results, an Excel table, and an HTML page with crops at 1 s, 3 s and one second before the end.};
-\node[small,anchor=west] at (.83,.88)
-  {For the included clip, compare the detected text with \texttt{thestoryofourhome.pl}, including the dot before \texttt{pl}.};
+\begin{tikzpicture}[
+  x=1cm,y=1cm,
+  box/.style={draw=black,line width=.45pt,fill=white,align=center,inner sep=8pt,text width=7.2cm},
+  flow/.style={-{Stealth[length=2.1mm,width=1.5mm]},line width=.5pt},
+  small/.style={font=\fontsize{8}{10}\selectfont,align=center},
+  every node/.style={text=black,font=\fontsize{9}{11}\selectfont}
+]
+\node[box,text width=7.2cm] (video) at (8.5,0) {\textbf{A recorded Instagram Reel}\\$N$ frames, duration $T$, frame rate $f$};
+\node[box] (crop) at (3.4,-2.3) {\textbf{Find the account region}\\Resize to $540\times960$; locate the profile circle\\and crop the adjacent account label.};
+\node[box] (ocr) at (3.4,-4.5) {\textbf{Choose an OCR reader}\\EasyOCR \quad or \quad PP-OCRv6 small\\Read text and confidence from each crop.};
+\node[box] (votes) at (3.4,-7.0) {\textbf{Read in both directions}\\Sample forward and backward through the clip.\\Filter interface text; count one vote per name per frame.\\Stop a pass at the required vote support.};
+\node[box] (compare) at (3.4,-9.6) {\textbf{Compare the two passes}\\Keep names, vote counts and review flags.\\Both passes can agree and still share an error.};
+\node[box,text width=7.2cm,minimum height=5.1cm] (evidence) at (13.6,-4.8) {\textbf{Save six moments for human review}\\[10pt]
+\begin{tabular}{@{}ll@{}}
+Existing moments & $1\,\mathrm{s},\;3\,\mathrm{s},\;T-1\,\mathrm{s}$\\[7pt]
+Lower quartile & $0.25T$\\[3pt]
+Median & $0.50T$\\[3pt]
+Upper quartile & $0.75T$
+\end{tabular}\\[12pt]
+Show an account crop and the full frame at each time.\\Click a frame to inspect it at a larger size.\\[5pt]
+{\fontsize{8}{10}\selectfont Frame index $i=\min(N-1,\,\max(0,\,\mathrm{round}(tf)))$.\\Out-of-range fixed times are marked unavailable.}};
+\node[box,text width=7.2cm,minimum height=2.15cm] (review) at (13.6,-9.6) {\textbf{Review in the local browser}\\Compare the readings against the visible handle.\\Confirm, correct, or mark the name unreadable.\\Add a note and press \emph{Save correction}.};
+\node[box] (raw) at (3.4,-12.6) {\textbf{Original evidence remains available}\\\texttt{results.csv / results.xlsx}\\\texttt{details.jsonl}: raw text, scores and frames\\\texttt{run.json}: engine, settings and versions};
+\node[box,text width=7.2cm] (saved) at (13.6,-12.6) {\textbf{Save the reviewed decision}\\\texttt{review\_state.json} retains the account names,\\decision, note, revision and correction history.\\Reopening the review restores saved edits.};
+\node[box,text width=7.2cm] (exports) at (13.6,-15.35) {\textbf{Refresh Excel and CSV}\\\texttt{reviewed.xlsx}\quad\texttt{reviewed.csv}\\Read \texttt{final\_names} and \texttt{review\_status}.\\Unreviewed or unreadable clips stay unresolved.};
+\node[box,text width=7.2cm] (example) at (3.4,-15.35) {\textbf{One punctuation correction}\\OCR: \texttt{thestoryofourhome-pl}\\Visible handle: \texttt{thestoryofourhome.pl}\\Saved decision: \texttt{corrected}};
+\draw[flow] (video.south) -- ++(0,-.38) -| (crop.north);
+\draw[flow] (video.south) -- ++(0,-.38) -| (evidence.north);
+\draw[flow] (crop) -- (ocr);
+\draw[flow] (ocr) -- (votes);
+\draw[flow] (votes) -- (compare);
+\draw[flow] (compare.east) -- ++(.65,0) |- (review.west);
+\draw[flow] (compare) -- (raw);
+\draw[flow] (evidence) -- (review);
+\draw[flow] (review) -- (saved);
+\draw[flow] (saved) -- node[right,small,text width=2cm] {on every save} (exports);
+\node[small,text width=14.5cm] at (8.5,-17.5) {The review writes to the exports in one direction. Editing Excel does not update the review.\\Corrections change the saved result; they do not retrain the OCR model.};
 \end{tikzpicture}
 \end{document}
