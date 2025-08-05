@@ -29,7 +29,8 @@ def scan(cap, fps, count, reader, config, reverse=False):
         detections = reader.readtext(crop, detail=1, paragraph=False, text_threshold=0.8)
         labels = []
         platform = "tiktok" if config.layout == "tiktok" else "instagram"
-        for _, text, confidence in detections:
+        model_sources = getattr(reader, "last_detection_models", [])
+        for detection_index, (_, text, confidence) in enumerate(detections):
             confidence = float(confidence)
             accepted = clean_candidates(str(text), platform) if confidence >= config.min_confidence else []
             labels.extend(accepted)
@@ -38,6 +39,8 @@ def scan(cap, fps, count, reader, config, reverse=False):
                 "frame": index, "seconds": round(index / fps, 4),
                 "raw_text": str(text), "confidence": confidence,
                 "candidates": accepted, "roi": list(box),
+                "recognition_models": (model_sources[detection_index]
+                                       if detection_index < len(model_sources) else []),
             })
         votes.add_frame(labels)
         top = votes.top(config.vote_margin)

@@ -29,7 +29,7 @@ class Config:
         if self.layout not in {"reels", "tiktok", "fixed"}:
             raise ValueError("layout must be reels, tiktok, or fixed")
         if not self.languages or not all(isinstance(x, str) and x for x in self.languages):
-            raise ValueError("Provide at least one EasyOCR language code")
+            raise ValueError("Provide at least one OCR language code")
         if not math.isfinite(self.sample_fps) or self.sample_fps <= 0:
             raise ValueError("sample_fps must be positive and finite")
         if self.min_votes < 1 or self.vote_margin < 0 or self.max_samples < 0:

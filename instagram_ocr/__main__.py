@@ -40,7 +40,8 @@ def parser():
         cmd.add_argument("--layout", choices=["reels", "tiktok", "fixed", "auto"], default="reels")
         cmd.add_argument("--roi", type=roi_arg, help="Fixed ROI in the resized 540x960 frame")
         cmd.add_argument("--circle-roi", type=roi_arg, default=(10, 560, 69, 250))
-        cmd.add_argument("--lang", nargs="+", default=["en", "pl"])
+        cmd.add_argument("--lang", nargs="+", default=["en", "pl"],
+                         help="OCR language codes, e.g. en de pl bg. Paddle selects script-capable models.")
         cmd.add_argument("--engine", choices=["easyocr", "paddle"], default="easyocr")
         cmd.add_argument("--paddle-size", choices=["tiny", "small", "medium"], default="small")
         cmd.add_argument("--gpu", action="store_true")
@@ -106,7 +107,8 @@ def run(args):
                 "config": asdict(config), "requested_layout": args.layout,
                 "source": str(source), "video_count": len(videos), "dependencies": {},
                 "engine": args.engine, "paddle_size": args.paddle_size if args.engine == "paddle" else None,
-                "paddle_mkldnn": False if args.engine == "paddle" else None}
+                "paddle_mkldnn": False if args.engine == "paddle" else None,
+                "model_names": getattr(reader, "model_names", [])}
     for name in ("easyocr", "torch", "opencv-python-headless", "opencv-contrib-python", "numpy", "paddleocr", "paddlepaddle", "paddlex"):
         try:
             metadata["dependencies"][name] = importlib.metadata.version(name)

@@ -40,49 +40,117 @@ def local_model(name, root, download_enabled):
     return folder
 
 
+# Language families are explicit so a requested script never silently falls back
+# to a recognizer that cannot emit it. Each specialized v5 model also reads English.
+PADDLE_V6_LANGUAGES = frozenset(
+    "en pl ch chinese_cht af az bs ca cs cy da de es et eu fi fr ga gl hr hu "
+    "id is it ku la lb lt lv mi ms mt nl no oc pt qu rm ro rs_latin sk sl sq sv "
+    "sw tl tr uz vi japan".split()
+)
+PADDLE_CYRILLIC_LANGUAGES = frozenset(
+    "ru rs_cyrillic be bg uk mn abq ady kbd ava dar inh che lbe lez tab kk ky "
+    "tg mk tt cv ba mhr mo udm kv os bua xal tyv sah kaa".split()
+)
+LANGUAGE_ALIASES = {"french": "fr", "german": "de", "ja": "japan"}
+
+
+def paddle_recognizers(languages, size="small"):
+    """Select script-capable recognition models; preserve the ordinary v6 path."""
+    if size not in {"tiny", "small", "medium"}:
+        raise ValueError("Paddle model size must be tiny, small or medium")
+    requested = {LANGUAGE_ALIASES.get(code.casefold(), code.casefold()) for code in languages}
+    supported = PADDLE_V6_LANGUAGES | PADDLE_CYRILLIC_LANGUAGES | {"el"}
+    unknown = requested - supported
+    if not requested or unknown:
+        raise ValueError("Unsupported Paddle language code(s): " + ", ".join(sorted(unknown)) +
+                         ". Examples: --lang en de pl bg (Latin and Cyrillic), or --lang en el (Greek).")
+    if size == "tiny" and "japan" in requested:
+        raise ValueError("Japanese needs --paddle-size small or medium")
+    names = []
+    # English is included in the Cyrillic/Greek model. A separate Latin reader is
+    # needed only for other v6 languages, or when no specialist was requested.
+    specialized = requested & (PADDLE_CYRILLIC_LANGUAGES | {"el"})
+    if requested & (PADDLE_V6_LANGUAGES - {"en"}) or not specialized:
+        names.append(f"PP-OCRv6_{size}_rec")
+    if requested & PADDLE_CYRILLIC_LANGUAGES:
+        names.append("cyrillic_PP-OCRv5_mobile_rec")
+    if "el" in requested:
+        names.append("el_PP-OCRv5_mobile_rec")
+    return names
+
+
+def overlapping_boxes(first, second):
+    """Match identical readings in the same region; never combine different text."""
+    if first is None or second is None:
+        return False
+    def bounds(box):
+        xs, ys = zip(*box)
+        return min(xs), min(ys), max(xs), max(ys)
+    ax, ay, ar, ab = bounds(first)
+    bx, by, br, bb = bounds(second)
+    intersection = max(0, min(ar, br)-max(ax, bx)) * max(0, min(ab, bb)-max(ay, by))
+    union = (ar-ax)*(ab-ay) + (br-bx)*(bb-by) - intersection
+    return union > 0 and intersection / union >= .5
+
+
 class PaddleReader:
     def __init__(self, config, size="small", model_directory=None, download_enabled=True):
-        if size not in {"tiny", "small", "medium"}:
-            raise ValueError("Paddle model size must be tiny, small or medium")
         if config.gpu:
             raise ValueError("The supplied Paddle setup is CPU-only; omit --gpu")
-        # These models share a multilingual recognizer, including English and Polish.
-        supported = set("en pl ch chinese_cht af az bs ca cs cy da de es et eu fi fr ga gl hr hu id is it ku la lb lt lv mi ms mt nl no oc pt qu rm ro rs_latin sk sl sq sv sw tl tr uz vi french german".split())
-        if size != "tiny":
-            supported.add("japan")
-        if not set(config.languages) <= supported:
-            raise ValueError("The selected PP-OCRv6 model does not support this --lang set")
+        self.recognition_models = paddle_recognizers(config.languages, size)
+        self.detection_model = f"PP-OCRv6_{size}_det"
+        self.model_names = [self.detection_model, *self.recognition_models]
+        self.last_detection_models = []
         try:
             from paddleocr import PaddleOCR
         except ImportError as exc:
             raise RuntimeError('PaddleOCR is missing. Run: python -m pip install -e ".[paddle,excel]"') from exc
-        kwargs = dict(
-            text_detection_model_name=f"PP-OCRv6_{size}_det",
-            text_recognition_model_name=f"PP-OCRv6_{size}_rec",
-            use_doc_orientation_classify=False, use_doc_unwarping=False,
-            use_textline_orientation=False, device="cpu", cpu_threads=4, enable_mkldnn=False,
-            text_det_limit_side_len=640, text_det_limit_type="max",
-        )
         root = Path(model_directory) if model_directory else Path.home() / ".cache" / "instagram-account-ocr"
+        self.models = []
         try:
-            for stage, suffix in (("detection", "det"), ("recognition", "rec")):
-                folder = local_model(f"PP-OCRv6_{size}_{suffix}", root, download_enabled)
-                kwargs[f"text_{stage}_model_dir"] = str(folder)
-            self.model = PaddleOCR(**kwargs)
+            detector = local_model(self.detection_model, root, download_enabled)
+            for name in self.recognition_models:
+                recognizer = local_model(name, root, download_enabled)
+                self.models.append(PaddleOCR(
+                    text_detection_model_name=self.detection_model,
+                    text_detection_model_dir=str(detector),
+                    text_recognition_model_name=name,
+                    text_recognition_model_dir=str(recognizer),
+                    use_doc_orientation_classify=False, use_doc_unwarping=False,
+                    use_textline_orientation=False, device="cpu", cpu_threads=4,
+                    enable_mkldnn=False, text_det_limit_side_len=640,
+                    text_det_limit_type="max",
+                ))
         except ValueError:
             raise
         except Exception as exc:
-            raise RuntimeError(f"Could not initialize PP-OCRv6: {exc}") from exc
+            raise RuntimeError(f"Could not initialize Paddle OCR models: {exc}") from exc
+        print("Recognition: " + ", ".join(self.recognition_models), flush=True)
+        if len(self.models) > 1:
+            print("Mixed scripts: each crop runs through multiple models. Conflicting readings remain for review.", flush=True)
 
     def readtext(self, image, **_):
-        detections = []
-        for result in self.model.predict(image):
-            # OCRResult is dict-like; no image serialization or API service needed.
-            texts = result["rec_texts"]
-            scores = result["rec_scores"]
-            boxes = result.get("rec_polys", [None] * len(texts))
-            if len(texts) != len(scores) or len(texts) != len(boxes):
-                raise RuntimeError("PaddleOCR returned inconsistent detection arrays")
-            detections.extend((box, str(text), float(score))
-                              for box, text, score in zip(boxes, texts, scores))
+        detections, sources = [], []
+        for model, name in zip(self.models, self.recognition_models):
+            for result in model.predict(image):
+                texts = result["rec_texts"]
+                scores = result["rec_scores"]
+                boxes = result.get("rec_polys", [None] * len(texts))
+                if len(texts) != len(scores) or len(texts) != len(boxes):
+                    raise RuntimeError("PaddleOCR returned inconsistent detection arrays")
+                for box, text, score in zip(boxes, texts, scores):
+                    text, score = str(text), float(score)
+                    duplicate = next((index for index, (old_box, old_text, _) in enumerate(detections)
+                                      if text.casefold() == old_text.casefold()
+                                      and overlapping_boxes(box, old_box)), None)
+                    if duplicate is None:
+                        detections.append((box, text, score))
+                        sources.append([name])
+                    else:
+                        old_box, old_text, old_score = detections[duplicate]
+                        detections[duplicate] = (old_box, old_text, max(score, old_score))
+                        sources[duplicate].append(name)
+        # Different readings of one region stay separate. Votes.add_frame gives a
+        # label at most one vote per frame, even if multiple readers recognize it.
+        self.last_detection_models = sources
         return detections

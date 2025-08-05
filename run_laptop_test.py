@@ -20,6 +20,9 @@ def main(argv=None):
     parser.add_argument("--no-review", action="store_true", help="Only compute outputs; do not start the review server")
     parser.add_argument("--engine", choices=["easyocr", "paddle"], default="easyocr")
     parser.add_argument("--paddle-size", choices=["tiny", "small", "medium"], default="small")
+    parser.add_argument("--lang", nargs="+", default=["en", "pl"], help="OCR codes, e.g. en de pl bg")
+    parser.add_argument("--layout", choices=["reels", "tiktok", "fixed"], default="reels")
+    parser.add_argument("--roi", help="Fixed crop x,y,width,height in the resized 540x960 frame")
     args = parser.parse_args(argv)
     video = args.video.expanduser().resolve()
     if not video.is_file():
@@ -45,12 +48,15 @@ def main(argv=None):
     print("CPU test: 2 samples/second, stop at 3 matching observations per direction.", flush=True)
     print("At most 12 sampled frames per direction, plus six review time points.", flush=True)
     print(f"Loading {args.engine}. The first run downloads model files.", flush=True)
-    code = run_ocr([
+    command = [
         "run", str(video), "--output", str(destination), "--engine", args.engine, "--paddle-size", args.paddle_size,
-        "--lang", "en", "pl", "--sample-fps", "2", "--min-votes", "3",
+        "--lang", *args.lang, "--layout", args.layout, "--sample-fps", "2", "--min-votes", "3",
         "--vote-margin", "0", "--max-samples", "12", "--screenshots", "--excel",
         "--model-dir", str(ROOT / "models"),
-    ])
+    ]
+    if args.roi:
+        command.extend(["--roi", args.roi])
+    code = run_ocr(command)
     details = destination / "details.jsonl"
     if details.is_file():
         rows = [json.loads(line) for line in details.read_text(encoding="utf-8").splitlines() if line.strip()]

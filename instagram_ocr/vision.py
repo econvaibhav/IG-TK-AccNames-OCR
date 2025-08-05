@@ -74,4 +74,9 @@ def make_reader(config, model_directory=None, download_enabled=True, engine="eas
     kwargs = {"gpu": config.gpu, "download_enabled": download_enabled}
     if model_directory:
         kwargs["model_storage_directory"] = str(model_directory)
-    return easyocr.Reader(list(config.languages), **kwargs)
+    try:
+        return easyocr.Reader(list(config.languages), **kwargs)
+    except ValueError as exc:
+        raise ValueError(f"EasyOCR cannot use this language combination: {exc}. "
+                         "For mixed Latin/Cyrillic clips, use --engine paddle --lang en de pl bg. "
+                         "For English/Bulgarian only, EasyOCR supports --lang en bg.") from exc
