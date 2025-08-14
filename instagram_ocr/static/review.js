@@ -37,26 +37,37 @@ async function post(route, payload) {
 }
 for (const card of cards) {
   const form = card.querySelector("form");
-  const names = form.elements.names, decision = form.elements.decision;
+  const names = form.elements.names, reviewed = form.elements.reviewed, unreadable = form.elements.unreadable;
   form.addEventListener("input", event => {
     dirty.add(card.dataset.id);
-    if (event.target === names) decision.value = names.value.trim() === names.dataset.original ? "confirmed" : "corrected";
+    if (event.target === names) {
+      reviewed.checked = names.value.trim().length > 0;
+      unreadable.checked = false;
+    } else if (event.target === reviewed && reviewed.checked) {
+      unreadable.checked = false;
+    } else if (event.target === unreadable && unreadable.checked) {
+      reviewed.checked = false;
+    }
     status(card.querySelector(".save-status"), "Unsaved changes");
   });
   form.addEventListener("submit", async event => {
     event.preventDefault();
     if (!token || saving) return;
+    const payload = {id:card.dataset.id, revision,
+      names:names.value.split(/\r?\n/).map(n=>n.trim()).filter(Boolean),
+      reviewed:reviewed.checked, unreadable:unreadable.checked, notes:form.elements.notes.value};
     saving = true;
-    const button = form.querySelector("button[type=submit]");
     for (const field of form.elements) field.disabled = true;
     for (const submit of document.querySelectorAll("button[type=submit]")) submit.disabled = true;
     status(card.querySelector(".save-status"), "Saving…");
     try {
-      const result = await post("/api/save", {id:card.dataset.id, revision, names:names.value, decision:decision.value, notes:form.elements.notes.value});
+      const result = await post("/api/save", payload);
       dirty.delete(card.dataset.id);
       updateProgress(result);
-      status(card.querySelector(".save-status"), result.export_errors.length ? "Correction saved. Export needs attention." : "Saved · Excel and CSV updated", result.export_errors.length > 0);
-      status(connection, result.export_errors.join(" ") || "All saved corrections are on disk. Excel and CSV are up to date.", result.export_errors.length > 0);
+      const entry = result.entries[card.dataset.id];
+      const message = result.export_errors.length ? "Saved. Excel needs attention." : `Saved · ${decisions[entry.decision]} · Excel updated`;
+      status(card.querySelector(".save-status"), message, result.export_errors.length > 0);
+      status(connection, result.export_errors.join(" ") || "All saved changes are on disk. Excel is up to date.", result.export_errors.length > 0);
       filter();
     } catch (error) {
       status(card.querySelector(".save-status"), error.message, true);
@@ -71,11 +82,11 @@ document.querySelector("#export").addEventListener("click", async () => {
   if (saving) return;
   try {
     const result = await post("/api/export", {});
-    status(connection, result.export_errors.join(" ") || "Excel and CSV refreshed from saved corrections.", result.export_errors.length > 0);
+    status(connection, result.export_errors.join(" ") || "Excel refreshed from saved changes.", result.export_errors.length > 0);
   } catch (error) {status(connection,error.message,true);}
 });
 for (const link of document.querySelectorAll(".downloads a")) link.addEventListener("click", event => {
-  if (!token) {event.preventDefault();status(connection,"Start the local review server to download exports.",true);}
+  if (!token) {event.preventDefault();status(connection,"Start the local review server to download Excel.",true);}
   else if (dirty.size && !window.confirm("Some edits are unsaved. Download the last saved version?")) event.preventDefault();
 });
 document.querySelector("#search").addEventListener("input", filter);
@@ -102,15 +113,18 @@ async function connect() {
     for (const card of cards) {
       const form = card.querySelector("form"), entry = data.entries[card.dataset.id];
       if (entry) {
-        form.elements.decision.value = entry.decision;
-        form.elements.names.value = entry.decision === "unreviewed" ? form.elements.names.dataset.original : entry.names.join(", ");
+        form.elements.reviewed.checked = ["confirmed", "corrected"].includes(entry.decision);
+        form.elements.unreadable.checked = entry.decision === "unreadable";
+        form.elements.names.value = entry.names.length ? entry.names.join("\n") : form.elements.names.dataset.original;
         form.elements.notes.value = entry.notes;
+      } else {
+        form.elements.reviewed.checked = form.elements.names.value.trim().length > 0;
       }
       form.querySelector("button[type=submit]").disabled = false;
-      status(card.querySelector(".save-status"), entry ? "Saved correction loaded" : "Check the frames, then choose a decision.");
+      status(card.querySelector(".save-status"), entry ? "Saved review loaded" : "If the name is right, simply save. Changes are detected automatically.");
     }
     document.querySelector("#export").disabled = false;
-    status(connection, "Connected locally. Save a correction to update Excel and CSV.");
+    status(connection, "Connected locally. Save your review to update Excel.");
     filter();
   } catch (error) {status(connection, `${error.message} Reopen the URL printed by the review command.`, true);}
 }

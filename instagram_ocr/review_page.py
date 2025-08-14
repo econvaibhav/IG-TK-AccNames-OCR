@@ -38,7 +38,7 @@ def save_review(results, path):
             names = row.get(direction, {}).get("candidates", [])
             value = "; ".join(f"{c['name']} ({c['votes']} votes)" for c in names) or "No reading"
             readings.append(f'<div><span class="eyebrow">{direction.title()} pass</span><p>{e(value)}</p></div>')
-        names = ", ".join(row.get("union_names", []))
+        names = "\n".join(row.get("union_names", []))
         reasons = ", ".join(r.replace("_", " ") for r in row.get("review_reasons", [])) or "No automatic flag"
         pictures = ''.join(figures) or '<p>No frames were saved for this video.</p>'
         cards.append(f'''<article data-id="{key}">
@@ -47,17 +47,17 @@ def save_review(results, path):
 <div class="readings">{''.join(readings)}<div><span class="eyebrow">Comparison</span><p>{e(row['status'])}</p></div></div>
 <p class="reason">{e(reasons)} {e(row.get('error', ''))}</p>
 <div class="pictures">{pictures}</div>
-<form><div class="edit-grid"><label>Actual account name(s)<input name="names" value="{e(names)}" data-original="{e(names)}" autocomplete="off" spellcheck="false" placeholder="account.name"></label>
-<label>Decision<select name="decision"><option value="unreviewed">Unreviewed</option><option value="confirmed">Confirmed</option><option value="corrected">Corrected</option><option value="unreadable">Cannot read</option></select></label></div>
-<p class="hint">Use the handle visible in the frames. Separate multiple accounts with commas.</p>
+<form><div class="edit-grid"><label>Account name(s)<textarea name="names" rows="2" maxlength="1000" data-original="{e(names)}" autocomplete="off" spellcheck="false" placeholder="Account name">{e(names)}</textarea></label>
+<div class="review-checks"><label><input name="reviewed" type="checkbox" checked> Mark as reviewed</label><label><input name="unreadable" type="checkbox"> Cannot read</label></div></div>
+<p class="hint">Keep the name if it is correct, or edit it. Use one line per account. Display names and all languages are welcome.</p>
 <label>Note <span class="optional">(optional)</span><input name="notes" maxlength="2000" placeholder="e.g. Dot before pl, not a hyphen"></label>
-<div class="save-row"><button type="submit" disabled>Save correction</button><span class="save-status" role="status">Start the local review server to edit.</span></div></form></article>''')
+<div class="save-row"><button type="submit" disabled>Save changes</button><span class="save-status" role="status">Start the local review server to edit.</span></div></form></article>''')
     path.write_text('''<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Account OCR review</title><link rel="stylesheet" href="review.css"><script src="review.js" defer></script></head><body>
-<header><div><span class="eyebrow">INSTAGRAM · ACCOUNT OCR</span><h1>Review the evidence.<br>Keep the right name.</h1><p>Inspect six moments, correct the account handle, and save to Excel and CSV.</p></div><div class="progress"><strong id="count">—</strong><span>clips resolved</span></div></header>
-<nav><label class="search">Find a clip or account<input id="search" type="search" placeholder="Search filenames and names"></label><label class="filter"><input id="pending" type="checkbox"> Unresolved only</label><div class="downloads"><a href="reviewed.xlsx" download>Download Excel</a><a href="reviewed.csv" download>CSV</a><button id="export" type="button" disabled>Refresh exports</button></div></nav>
+<header><div><span class="eyebrow">INSTAGRAM / TIKTOK · ACCOUNT OCR</span><h1>Review the evidence.<br>Keep the right name.</h1><p>Inspect six moments, check the account name, and save to Excel.</p></div><div class="progress"><strong id="count">—</strong><span>clips resolved</span></div></header>
+<nav><label class="search">Find a clip or account<input id="search" type="search" placeholder="Search filenames and names"></label><label class="filter"><input id="pending" type="checkbox"> Unresolved only</label><div class="downloads"><a href="reviewed.xlsx" download>Download Excel</a><button id="export" type="button" disabled>Refresh Excel</button></div></nav>
 <p id="connection" role="status">Connecting to the local review server…</p>
 <main>''' + ''.join(cards) + '''</main><p id="empty" hidden>No clips match this filter.</p>
-<footer>Save updates reviewed.xlsx and reviewed.csv. Original OCR readings stay in results.* and details.jsonl. Editing Excel does not change this review.</footer>
+<footer>Save updates reviewed.xlsx. Your original OCR readings remain available. Editing Excel does not change this review.</footer>
 <dialog id="lightbox"><button id="close" type="button">Close</button><p id="caption"></p><img id="enlarged" alt="Full video frame"></dialog></body></html>''', encoding="utf-8")
     for suffix in ("css", "js"):
         shutil.copyfile(Path(__file__).parent / "static" / f"review.{suffix}", path.parent / f"review.{suffix}")

@@ -5,14 +5,13 @@ from datetime import datetime, timezone
 from hashlib import sha256
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import copy
-import csv
 import json
 import mimetypes
 import os
 from pathlib import Path
-import re
 import secrets
 import tempfile
+import unicodedata
 from urllib.parse import unquote, urlsplit
 import webbrowser
 
@@ -87,23 +86,40 @@ class ReviewStore:
     def save(self, payload):
         if payload.get("revision") != self.state["revision"]:
             raise Conflict("This review changed in another tab. Reload before saving.")
-        key, decision = payload.get("id"), payload.get("decision")
+        key = payload.get("id")
         if key not in self.by_id:
             raise ValueError("Unknown video")
-        if decision not in {"unreviewed", "confirmed", "corrected", "unreadable"}:
-            raise ValueError("Choose a review decision")
-        text, notes = payload.get("names", ""), payload.get("notes", "")
-        if not isinstance(text, str) or len(text) > 1000 or not isinstance(notes, str) or len(notes) > 2000:
+        value, notes = payload.get("names", []), payload.get("notes", "")
+        # New pages send a list: commas inside a display name stay intact.
+        # Keep the old API readable for existing review pages and saved runs.
+        if isinstance(value, str):
+            value = value.replace(",", "\n").splitlines()
+        if not isinstance(value, list) or len(value) > 32 or not all(isinstance(n, str) for n in value):
+            raise ValueError("Enter one account name per line")
+        if not isinstance(notes, str) or len(notes) > 2000 or sum(len(n) for n in value) > 1000:
             raise ValueError("Account names or notes are too long")
-        names = list(dict.fromkeys(n.strip().lstrip("@") for n in re.split(r"[,\n]", text) if n.strip()))
-        if decision in {"confirmed", "corrected"}:
-            if not names or any(not re.fullmatch(r"[A-Za-z0-9_.]{1,30}", n) for n in names):
-                raise ValueError("Enter the actual account handle: letters, numbers, dots or underscores (1–30 characters). Separate accounts with commas.")
-            original = self.by_id[key].get("union_names", [])
-            if decision == "confirmed" and {n.casefold() for n in names} != {n.casefold() for n in original}:
-                raise ValueError("The name changed. Choose Corrected to save it.")
+        names = list(dict.fromkeys(unicodedata.normalize("NFC", n.strip()) for n in value if n.strip()))
+        for name in names:
+            if len(name) > 200 or any(unicodedata.category(c) in {"Cc", "Cs"} for c in name):
+                raise ValueError("An account name must be at most 200 characters and contain no control characters")
+        original = self.by_id[key].get("union_names", [])
+        key_for = lambda n: unicodedata.normalize("NFC", n.strip().lstrip("@")).casefold()
+        unchanged = {key_for(n) for n in names} == {key_for(n) for n in original}
+        if "reviewed" in payload or "unreadable" in payload:
+            reviewed, unreadable = payload.get("reviewed", False), payload.get("unreadable", False)
+            if type(reviewed) is not bool or type(unreadable) is not bool:
+                raise ValueError("Review checkboxes must be true or false")
+            if reviewed and unreadable:
+                raise ValueError("Choose Mark as reviewed or Cannot read")
+            decision = "unreadable" if unreadable else ("confirmed" if unchanged else "corrected") if reviewed else "unreviewed"
         else:
-            names = []
+            decision = payload.get("decision")
+            if decision not in {"unreviewed", "confirmed", "corrected", "unreadable"}:
+                raise ValueError("Choose a review decision")
+            if decision in {"confirmed", "corrected"}:
+                decision = "confirmed" if unchanged else "corrected"
+        if decision in {"confirmed", "corrected"} and not names:
+            raise ValueError("Enter an account name, or tick Cannot read")
         updated = datetime.now(timezone.utc).isoformat(timespec="seconds")
         entry = {"decision": decision, "names": names, "notes": notes.strip(), "updated_utc": updated}
         new_state = copy.deepcopy(self.state)
@@ -120,7 +136,7 @@ class ReviewStore:
         for result in self.results:
             entry = self.state["entries"].get(row_id(result), {})
             decision = entry.get("decision", "unreviewed")
-            final = result.get("union_names", []) if decision == "unreviewed" else entry.get("names", [])
+            final = result.get("union_names", []) if decision == "unreviewed" else [] if decision == "unreadable" else entry.get("names", [])
             row = csv_row(result)
             row.update(review_status=decision, final_names=json.dumps(final, ensure_ascii=False),
                        review_notes=entry.get("notes", ""), reviewed_utc=entry.get("updated_utc", ""),
@@ -130,25 +146,14 @@ class ReviewStore:
         return rows
 
     def export(self):
-        rows = self.reviewed_rows()
-        errors = []
-        def csv_export(path):
-            with path.open("w", encoding="utf-8-sig", newline="") as stream:
-                headers = list(rows[0]) if rows else list(csv_row({"path": "", "status": ""})) + ["review_status", "final_names", "review_notes", "reviewed_utc", "review_revision", "needs_manual_review"]
-                writer = csv.DictWriter(stream, fieldnames=headers)
-                writer.writeheader()
-                # Spreadsheet-safe strings; exact text remains in JSON and XLSX.
-                writer.writerows({k: "'" + v if isinstance(v, str) and v.startswith(("=", "+", "-", "@", "\t", "\r")) else v for k, v in row.items()} for row in rows)
-        for name in ("reviewed.csv", "reviewed.xlsx"):
-            try:
-                if name.endswith(".csv"):
-                    atomic_write(self.folder / name, csv_export)
-                else:
-                    from .excel import save_excel
-                    atomic_write(self.folder / name, lambda p: save_excel(self.results, p, rows=rows, evidence_root=self.folder))
-            except (OSError, ImportError) as exc:
-                errors.append(f"{name}: {type(exc).__name__}. Close the workbook if it is open, check Excel dependencies, and retry Export.")
-        return errors
+        """Refresh the one user-facing workbook from the durable review state."""
+        try:
+            from .excel import save_excel
+            atomic_write(self.folder / "reviewed.xlsx", lambda path: save_excel(
+                self.results, path, rows=self.reviewed_rows(), evidence_root=self.folder))
+        except (OSError, ImportError) as exc:
+            return [f"reviewed.xlsx: {type(exc).__name__}. Close the workbook if it is open and retry Refresh Excel."]
+        return []
 
 
 @contextmanager
@@ -195,13 +200,13 @@ def make_server(store, port=0):
             request = unquote(urlsplit(self.path).path)
             if request == "/api/state":
                 return self.reply(200, {**store.snapshot(), "token": token})
-            if request in {"/reviewed.csv", "/reviewed.xlsx"}:
+            if request == "/reviewed.xlsx":
                 errors = store.export()
                 relevant = [e for e in errors if e.startswith(request[1:])]
                 if relevant:
                     return self.reply(503, {"error": " ".join(relevant)})
             relative = "review.html" if request == "/" else request.lstrip("/")
-            if relative not in {"review.html", "review.js", "review.css", "reviewed.csv", "reviewed.xlsx"} and not relative.startswith("screenshots/"):
+            if relative not in {"review.html", "review.js", "review.css", "reviewed.xlsx"} and not relative.startswith("screenshots/"):
                 return self.reply(404, {"error": "Not found"})
             path = (store.folder / relative).resolve()
             if not path.is_relative_to(store.folder) or not path.is_file():

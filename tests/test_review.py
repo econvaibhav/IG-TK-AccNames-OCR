@@ -1,6 +1,5 @@
 """Corrections must survive reload, preserve raw data and reject stale saves."""
 
-import csv
 import json
 from pathlib import Path
 import tempfile
@@ -25,7 +24,7 @@ class ReviewTests(unittest.TestCase):
         (self.folder / "details.jsonl").write_text(self.raw)
         (self.folder / "results.csv").write_text("original\n")
         self.store = ReviewStore(self.folder)
-        self.payload = {"id":row_id(self.row),"revision":0,"names":"@name.with.dot", "decision":"corrected", "notes":"=literal note"}
+        self.payload = {"id":row_id(self.row),"revision":0,"names":["name.with.dot"], "reviewed":True, "unreadable":False, "notes":"=literal note"}
 
     def test_save_reload_and_spreadsheets_preserve_original(self):
         errors = self.store.save(self.payload)
@@ -34,10 +33,7 @@ class ReviewTests(unittest.TestCase):
         self.assertEqual(reloaded.state["entries"][self.payload["id"]]["names"], ["name.with.dot"])
         self.assertEqual((self.folder / "details.jsonl").read_text(), self.raw)
         self.assertEqual((self.folder / "results.csv").read_text(), "original\n")
-        with (self.folder / "reviewed.csv").open(encoding="utf-8-sig") as stream:
-            row = next(csv.DictReader(stream))
-        self.assertEqual(json.loads(row["final_names"]), ["name.with.dot"])
-        self.assertEqual(row["review_notes"], "'=literal note")
+        self.assertFalse((self.folder / "reviewed.csv").exists())
         from openpyxl import load_workbook
         book = load_workbook(self.folder / "reviewed.xlsx")
         sheet = book.active
@@ -54,14 +50,39 @@ class ReviewTests(unittest.TestCase):
             self.store.save({**self.payload, "names":"different"})
         self.assertEqual(self.store.state["revision"], 1)
 
-    def test_invalid_handle_and_false_confirmation_rejected(self):
-        for changes in ({"names":"not-a-handle"},{"names":""},{"decision":"confirmed"}):
+    def test_unchanged_non_ascii_and_display_names_can_be_confirmed(self):
+        for name in ("България Новини", "Müller Politik", "Łódź, Polska", "a-name", "very.long.display.name.over.thirty.characters"):
+            self.store.by_id[self.payload["id"]]["union_names"] = [name]
+            self.store.save({**self.payload, "revision":self.store.state["revision"], "names":[name]})
+            entry = self.store.state["entries"][self.payload["id"]]
+            self.assertEqual(entry["decision"], "confirmed")
+            self.assertEqual(entry["names"], [name])
+
+    def test_changed_name_is_automatically_corrected(self):
+        self.store.save(self.payload)
+        self.assertEqual(self.store.state["entries"][self.payload["id"]]["decision"], "corrected")
+
+    def test_empty_review_and_control_characters_rejected(self):
+        for changes in ({"names":[]}, {"names":["bad\x00name"]}, {"names":["x"*201]}, {"unreadable":True}):
             with self.assertRaises(ValueError):
                 self.store.save({**self.payload, **changes})
         self.assertFalse(self.store.path.exists())
 
+    def test_unchecked_review_keeps_draft_and_original_final_names(self):
+        self.store.save({**self.payload,"reviewed":False})
+        entry = ReviewStore(self.folder).state["entries"][self.payload["id"]]
+        self.assertEqual(entry["names"], ["name.with.dot"])
+        self.assertEqual(entry["decision"], "unreviewed")
+        self.assertEqual(json.loads(self.store.reviewed_rows()[0]["final_names"]),["name-with-dot"])
+
+    def test_old_saved_review_and_old_page_api_are_compatible(self):
+        self.store.save({"id":self.payload["id"],"revision":0,"names":"България Новини","decision":"confirmed"})
+        reloaded=ReviewStore(self.folder)
+        self.assertEqual(reloaded.state["entries"][self.payload["id"]]["names"],["България Новини"])
+        self.assertEqual(reloaded.state["entries"][self.payload["id"]]["decision"],"corrected")
+
     def test_unreadable_clears_final_names_and_remains_unresolved(self):
-        self.store.save({**self.payload, "decision":"unreadable"})
+        self.store.save({**self.payload, "reviewed":False, "unreadable":True})
         row = self.store.reviewed_rows()[0]
         self.assertEqual(row["final_names"], "[]")
         self.assertTrue(row["needs_manual_review"])
@@ -92,6 +113,9 @@ class ReviewTests(unittest.TestCase):
                 self.assertEqual(error.exception.code, 403)
             with self.assertRaises(HTTPError):
                 urlopen(url + "/screenshots/../../details.jsonl")
+            with self.assertRaises(HTTPError) as csv_error:
+                urlopen(url + "/reviewed.csv")
+            self.assertEqual(csv_error.exception.code, 404)
         finally:
             server.shutdown(); server.server_close(); thread.join()
 
