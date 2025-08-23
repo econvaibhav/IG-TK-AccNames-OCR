@@ -1,2 +1,0 @@
-﻿path,status,needs_review,review_reasons,forward_names,reverse_names,union_names,matches,duration_seconds,error,review_status,final_names,review_notes,reviewed_utc,review_revision,needs_manual_review
-examples/part_16_reel.mp4,agreement,True,"[""nonstandard_label""]","[{""name"": ""thestoryofourhome-pl"", ""votes"": 3}]","[{""name"": ""thestoryofourhome-pl"", ""votes"": 3}]","[""thestoryofourhome-pl""]","[{""forward"": ""thestoryofourhome-pl"", ""reverse"": ""thestoryofourhome-pl"", ""similarity"": 1.0}]",8.842166666666667,,unreviewed,"[""thestoryofourhome-pl""]",,,0,True
