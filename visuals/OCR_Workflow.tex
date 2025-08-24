@@ -5,42 +5,85 @@
 \usepackage{tikz}
 \usetikzlibrary{arrows.meta,positioning,calc}
 \begin{document}
+\hyphenpenalty=10000
+\exhyphenpenalty=10000
 \begin{tikzpicture}[
   x=1cm,y=1cm,
-  box/.style={draw=black,line width=.45pt,fill=white,align=center,inner sep=8pt,text width=7.2cm},
-  flow/.style={-{Stealth[length=2.1mm,width=1.5mm]},line width=.5pt},
-  small/.style={font=\fontsize{8}{10}\selectfont,align=center},
+  box/.style={draw=black,line width=.45pt,fill=white,align=center,inner sep=8pt,text width=7.4cm},
+  flow/.style={-{Stealth[length=2mm,width=1.4mm]},line width=.5pt},
+  note/.style={font=\fontsize{8}{10}\selectfont,align=center},
   every node/.style={text=black,font=\fontsize{9}{11}\selectfont}
 ]
-\node[box,text width=7.2cm] (video) at (8.5,0) {\textbf{A recorded Instagram Reel}\\$N$ frames, duration $T$, frame rate $f$};
-\node[box] (crop) at (3.4,-2.3) {\textbf{Find the account region}\\Resize to $540\times960$; locate the profile circle\\and crop the adjacent account label.};
-\node[box] (ocr) at (3.4,-4.5) {\textbf{Choose an OCR reader}\\EasyOCR \quad or \quad PP-OCRv6 small\\Read text and confidence from each crop.};
-\node[box] (votes) at (3.4,-7.0) {\textbf{Read in both directions}\\Sample forward and backward through the clip.\\Filter interface text; count one vote per name per frame.\\Stop a pass at the required vote support.};
-\node[box] (compare) at (3.4,-9.6) {\textbf{Compare the two passes}\\Keep names, vote counts and review flags.\\Both passes can agree and still share an error.};
-\node[box,text width=7.2cm,minimum height=5.1cm] (evidence) at (13.6,-4.8) {\textbf{Save six moments for human review}\\[10pt]
-\begin{tabular}{@{}ll@{}}
-Existing moments & $1\,\mathrm{s},\;3\,\mathrm{s},\;T-1\,\mathrm{s}$\\[7pt]
-Lower quartile & $0.25T$\\[3pt]
-Median & $0.50T$\\[3pt]
-Upper quartile & $0.75T$
-\end{tabular}\\[12pt]
-Show an account crop and the full frame at each time.\\Click a frame to inspect it at a larger size.\\[5pt]
-{\fontsize{8}{10}\selectfont Frame index $i=\min(N-1,\,\max(0,\,\mathrm{round}(tf)))$.\\Out-of-range fixed times are marked unavailable.}};
-\node[box,text width=7.2cm,minimum height=2.15cm] (review) at (13.6,-9.6) {\textbf{Review in the local browser}\\Compare the readings against the visible handle.\\Confirm, correct, or mark the name unreadable.\\Add a note and press \emph{Save correction}.};
-\node[box] (raw) at (3.4,-12.6) {\textbf{Original evidence remains available}\\\texttt{results.csv / results.xlsx}\\\texttt{details.jsonl}: raw text, scores and frames\\\texttt{run.json}: engine, settings and versions};
-\node[box,text width=7.2cm] (saved) at (13.6,-12.6) {\textbf{Save the reviewed decision}\\\texttt{review\_state.json} retains the account names,\\decision, note, revision and correction history.\\Reopening the review restores saved edits.};
-\node[box,text width=7.2cm] (exports) at (13.6,-15.35) {\textbf{Refresh Excel and CSV}\\\texttt{reviewed.xlsx}\quad\texttt{reviewed.csv}\\Read \texttt{final\_names} and \texttt{review\_status}.\\Unreviewed or unreadable clips stay unresolved.};
-\node[box,text width=7.2cm] (example) at (3.4,-15.35) {\textbf{One punctuation correction}\\OCR: \texttt{thestoryofourhome-pl}\\Visible handle: \texttt{thestoryofourhome.pl}\\Saved decision: \texttt{corrected}};
-\draw[flow] (video.south) -- ++(0,-.38) -| (crop.north);
-\draw[flow] (video.south) -- ++(0,-.38) -| (evidence.north);
-\draw[flow] (crop) -- (ocr);
-\draw[flow] (ocr) -- (votes);
-\draw[flow] (votes) -- (compare);
-\draw[flow] (compare.east) -- ++(.65,0) |- (review.west);
-\draw[flow] (compare) -- (raw);
-\draw[flow] (evidence) -- (review);
-\draw[flow] (review) -- (saved);
-\draw[flow] (saved) -- node[right,small,text width=2cm] {on every save} (exports);
-\node[small,text width=14.5cm] at (8.5,-17.5) {The review writes to the exports in one direction. Editing Excel does not update the review.\\Corrections change the saved result; they do not retrain the OCR model.};
+\node[box,text width=10.7cm] (input) at (4.7,0.4) {
+  \textbf{One clip or a folder of clips}\\
+  Process each video in turn; collect all results in one workbook.\\
+  Select the Instagram, TikTok or custom crop layout.};
+\node[box] (crop) at (0,-2.7) {
+  \textbf{Locate the account region}\\
+  Resize each sampled frame to $540\times960$.\\[4pt]
+  Instagram: profile search strip $\rightarrow$ lowest circle\\
+  $\rightarrow$ adjacent $380\times40$ account crop.\\[4pt]
+  TikTok: fixed lower-left region, or a custom ROI.};
+\node[box] (reader) at (0,-6.5) {
+  \textbf{Choose the reader and script}\\
+  EasyOCR language codes or Paddle script models.\\
+  Use a matching Latin or Cyrillic reader.\\[4pt]
+  OCR returns text and confidence for each crop.\\
+  Keep candidate names; remove interface labels.};
+\node[box] (votes) at (0,-10.1) {
+  \textbf{Read forward and backward}\\
+  Sample frames in each direction.\\
+  Count one vote per name in each frame;\\
+  stop a pass when the required support is reached.\\[4pt]
+  Compare candidates and flag uncertainty.};
+\node[box,minimum height=4.85cm] (frames) at (9.4,-4.6) {
+  \textbf{Keep six moments as review evidence}\\[9pt]
+  \begin{tabular}{@{}ll@{}}
+    Fixed times & $1\,\mathrm{s},\;3\,\mathrm{s},\;T-1\,\mathrm{s}$\\[8pt]
+    Quarter & $0.25T$\\[4pt]
+    Median & $0.50T$\\[4pt]
+    Three quarters & $0.75T$
+  \end{tabular}\\[11pt]
+  Save the account crop and the full frame.\\
+  Enlarge images to inspect the visible name.\\[5pt]
+  {\fontsize{8}{10}\selectfont $T$ is clip duration. Unavailable fixed times are marked.\\
+  Requested times can select the same frame.}};
+\node[box,minimum height=2.25cm] (review) at (9.4,-10.1) {
+  \textbf{Check the name in the browser}\\
+  Tick \emph{Mark as reviewed}; keep a correct name unchanged.\\
+  Edit the name only when a correction is needed.\\
+  Tick \emph{Cannot read} when the evidence is unclear.\\[4pt]
+  Add an optional note; press \emph{Save changes}.};
+\node[box] (original) at (0,-13.7) {
+  \textbf{Preserve the original readings}\\
+  Keep raw text, confidence, vote counts,\\
+  frame positions, engine and run settings.\\[4pt]
+  Agreement between passes is supporting evidence,\\
+  not verification of the account's identity.};
+\node[box] (state) at (9.4,-13.7) {
+  \textbf{Store the review decision}\\
+  Infer \emph{confirmed} or \emph{corrected} from the name;\\
+  keep unreadable clips unresolved.\\[4pt]
+  Retain notes and correction history.\\
+  Reopening the review restores saved decisions.};
+\node[box,text width=10.7cm] (excel) at (4.7,-17.15) {
+  \textbf{Update and download Excel}\\
+  \texttt{reviewed.xlsx}: one row per clip, original readings alongside\\
+  \texttt{final\_names}, \texttt{review\_status} and reviewer notes.\\[4pt]
+  Saving a review refreshes the workbook for the whole run.};
+\draw[flow] (input.south) -- ++(0,-.38) -| (crop.north);
+\draw[flow] (input.south) -- ++(0,-.38) -| (frames.north);
+\draw[flow] (crop) -- (reader);
+\draw[flow] (reader) -- (votes);
+\draw[flow] (votes) -- (original);
+\draw[flow] (votes.east) -- (review.west);
+\draw[flow] (frames) -- (review);
+\draw[flow] (review) -- (state);
+\draw[flow] (original.south) -- ++(0,-.45) -| ($(excel.north)+(-2.6,0)$);
+\draw[flow] (state.south) -- ++(0,-.45) -| ($(excel.north)+(2.6,0)$);
+\node[note,text width=15.3cm] at (4.7,-19.2) {
+  Example: \texttt{thestoryofourhome-pl} $\rightarrow$ \texttt{thestoryofourhome.pl}; a punctuation correction.\\[3pt]
+  Review $\rightarrow$ Excel is one-way. Editing Excel does not change the review.\\
+  Corrections update the saved result; they do not retrain the OCR reader.};
 \end{tikzpicture}
 \end{document}
