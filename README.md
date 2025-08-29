@@ -399,6 +399,7 @@ The tests cover sampling and voting, language routing, mixed-model duplicate
 readings, saved corrections and reopening, unchanged Unicode/display names,
 draft and unreadable decisions, Excel failures, stale review revisions, and
 short-clip frame bounds. Model weights are not required for these unit tests.
+GitHub Actions runs the same tests on Python 3.10 and 3.12 and builds a wheel.
 The supplied Paddle adapter was checked with PaddleOCR 3.7.0 and PaddlePaddle
 3.3.1 on Linux CPU; MKL-DNN is disabled because its accelerated path failed on
 the test runtime. GPU Paddle inference is not enabled by this setup.
