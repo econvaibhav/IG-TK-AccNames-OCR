@@ -1,4 +1,4 @@
-"""Command line: python -m instagram_ocr --help."""
+"""Command line: ig-tk-accnames-ocr --help (or python -m instagram_ocr)."""
 
 import argparse
 from dataclasses import asdict, replace
@@ -13,6 +13,7 @@ from . import __version__
 from .core import Config
 from .files import discover_videos, make_manifest, pick_task, platform_from_path, save_csv, save_review
 from .pipeline import process_video
+from .languages import ListLanguagesAction, resolve_languages
 from .vision import make_reader, open_video
 
 
@@ -27,7 +28,10 @@ def roi_arg(value):
 
 
 def parser():
-    p = argparse.ArgumentParser(description="Read account labels from recorded social-media clips.")
+    p = argparse.ArgumentParser(prog="ig-tk-accnames-ocr",
+                                description="IG-TK-AccNames-OCR: read account labels from social-media clips.")
+    p.add_argument("--list-languages", action=ListLanguagesAction,
+                   help="List language codes and presets without loading OCR")
     commands = p.add_subparsers(dest="command", required=True)
     run = commands.add_parser("run", help="Process a video or folder")
     run.add_argument("input", type=Path)
@@ -35,13 +39,15 @@ def parser():
     batch.add_argument("manifest", type=Path)
     batch.add_argument("--task-id", type=int, help="One-based; defaults to SLURM_ARRAY_TASK_ID")
     for cmd in (run, batch):
+        cmd.add_argument("--list-languages", action=ListLanguagesAction,
+                         help="List language codes and presets without loading OCR")
         cmd.add_argument("--output", type=Path, required=True, help="New output directory")
         cmd.add_argument("--recursive", action="store_true")
         cmd.add_argument("--layout", choices=["reels", "tiktok", "fixed", "auto"], default="reels")
         cmd.add_argument("--roi", type=roi_arg, help="Fixed ROI in the resized 540x960 frame")
         cmd.add_argument("--circle-roi", type=roi_arg, default=(10, 560, 69, 250))
         cmd.add_argument("--lang", nargs="+", default=["en", "pl"],
-                         help="OCR language codes, e.g. en de pl bg. Paddle selects script-capable models.")
+                         help="Codes/names or europe/europe-latin, e.g. en de pl bg. See --list-languages.")
         cmd.add_argument("--engine", choices=["easyocr", "paddle"], default="easyocr")
         cmd.add_argument("--paddle-size", choices=["tiny", "small", "medium"], default="small")
         cmd.add_argument("--gpu", action="store_true")
@@ -69,6 +75,7 @@ def parser():
 
 
 def run(args):
+    languages = resolve_languages(args.lang, args.engine)
     if args.command == "batch":
         task = args.task_id
         if task is None:
@@ -83,7 +90,7 @@ def run(args):
     if args.roi is not None and args.layout not in {"fixed", "tiktok"}:
         raise ValueError("--roi requires --layout fixed or tiktok")
     config = Config(
-        languages=tuple(args.lang), gpu=args.gpu,
+        languages=languages, gpu=args.gpu,
         layout="reels" if args.layout == "auto" else args.layout,
         sample_fps=args.sample_fps, min_votes=args.min_votes,
         vote_margin=args.vote_margin, similarity=args.similarity,
@@ -105,6 +112,7 @@ def run(args):
     destination.mkdir(parents=True)
     metadata = {"version": __version__, "created_utc": datetime.now(timezone.utc).isoformat(),
                 "config": asdict(config), "requested_layout": args.layout,
+                "requested_languages": list(args.lang),
                 "source": str(source), "video_count": len(videos), "dependencies": {},
                 "engine": args.engine, "paddle_size": args.paddle_size if args.engine == "paddle" else None,
                 "paddle_mkldnn": False if args.engine == "paddle" else None,

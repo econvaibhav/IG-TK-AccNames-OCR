@@ -3,6 +3,8 @@
 from contextlib import contextmanager
 import math
 
+from .languages import resolve_languages
+
 
 def cv_module():
     try:
@@ -67,6 +69,9 @@ def make_reader(config, model_directory=None, download_enabled=True, engine="eas
         return PaddleReader(config, paddle_size, model_directory, download_enabled)
     if engine != "easyocr":
         raise ValueError(f"Unknown OCR engine: {engine}")
+    languages = resolve_languages(config.languages, "easyocr")
+    if "japan" in languages:
+        languages = tuple("ja" if code == "japan" else code for code in languages)
     try:
         import easyocr
     except ImportError as exc:
@@ -75,7 +80,7 @@ def make_reader(config, model_directory=None, download_enabled=True, engine="eas
     if model_directory:
         kwargs["model_storage_directory"] = str(model_directory)
     try:
-        return easyocr.Reader(list(config.languages), **kwargs)
+        return easyocr.Reader(list(languages), **kwargs)
     except ValueError as exc:
         raise ValueError(f"EasyOCR cannot use this language combination: {exc}. "
                          "For mixed Latin/Cyrillic clips, use --engine paddle --lang en de pl bg. "

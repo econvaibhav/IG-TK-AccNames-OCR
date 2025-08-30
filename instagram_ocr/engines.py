@@ -6,6 +6,9 @@ import tarfile
 import tempfile
 from urllib.request import urlopen
 
+from .languages import (PADDLE_CYRILLIC_LANGUAGES, PADDLE_V6_LANGUAGES,
+                        resolve_languages)
+
 
 def local_model(name, root, download_enabled):
     """Cache official inference weights without depending on a hub health check."""
@@ -40,30 +43,11 @@ def local_model(name, root, download_enabled):
     return folder
 
 
-# Language families are explicit so a requested script never silently falls back
-# to a recognizer that cannot emit it. Each specialized v5 model also reads English.
-PADDLE_V6_LANGUAGES = frozenset(
-    "en pl ch chinese_cht af az bs ca cs cy da de es et eu fi fr ga gl hr hu "
-    "id is it ku la lb lt lv mi ms mt nl no oc pt qu rm ro rs_latin sk sl sq sv "
-    "sw tl tr uz vi japan".split()
-)
-PADDLE_CYRILLIC_LANGUAGES = frozenset(
-    "ru rs_cyrillic be bg uk mn abq ady kbd ava dar inh che lbe lez tab kk ky "
-    "tg mk tt cv ba mhr mo udm kv os bua xal tyv sah kaa".split()
-)
-LANGUAGE_ALIASES = {"french": "fr", "german": "de", "ja": "japan"}
-
-
 def paddle_recognizers(languages, size="small"):
     """Select script-capable recognition models; preserve the ordinary v6 path."""
     if size not in {"tiny", "small", "medium"}:
         raise ValueError("Paddle model size must be tiny, small or medium")
-    requested = {LANGUAGE_ALIASES.get(code.casefold(), code.casefold()) for code in languages}
-    supported = PADDLE_V6_LANGUAGES | PADDLE_CYRILLIC_LANGUAGES | {"el"}
-    unknown = requested - supported
-    if not requested or unknown:
-        raise ValueError("Unsupported Paddle language code(s): " + ", ".join(sorted(unknown)) +
-                         ". Examples: --lang en de pl bg (Latin and Cyrillic), or --lang en el (Greek).")
+    requested = set(resolve_languages(languages, "paddle"))
     if size == "tiny" and "japan" in requested:
         raise ValueError("Japanese needs --paddle-size small or medium")
     names = []
@@ -105,7 +89,10 @@ class PaddleReader:
             from paddleocr import PaddleOCR
         except ImportError as exc:
             raise RuntimeError('PaddleOCR is missing. Run: python -m pip install -e ".[paddle,excel]"') from exc
-        root = Path(model_directory) if model_directory else Path.home() / ".cache" / "instagram-account-ocr"
+        legacy_cache = Path.home() / ".cache" / "instagram-account-ocr"
+        default_cache = Path.home() / ".cache" / "ig-tk-accnames-ocr"
+        root = Path(model_directory) if model_directory else (
+            default_cache if default_cache.exists() or not legacy_cache.exists() else legacy_cache)
         self.models = []
         try:
             detector = local_model(self.detection_model, root, download_enabled)

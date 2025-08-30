@@ -9,21 +9,29 @@ import os
 from pathlib import Path
 import sys
 
+from instagram_ocr.languages import ListLanguagesAction, resolve_languages
+
 ROOT = Path(__file__).resolve().parent
 SAMPLE = ROOT / "examples" / "part_16_reel.mp4"
 
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--list-languages", action=ListLanguagesAction,
+                        help="List codes and presets without loading OCR")
     parser.add_argument("--video", type=Path, default=SAMPLE, help="Optional replacement clip")
     parser.add_argument("--no-open", action="store_true", help="Run the review server without opening a browser")
     parser.add_argument("--no-review", action="store_true", help="Only compute outputs; do not start the review server")
     parser.add_argument("--engine", choices=["easyocr", "paddle"], default="easyocr")
     parser.add_argument("--paddle-size", choices=["tiny", "small", "medium"], default="small")
-    parser.add_argument("--lang", nargs="+", default=["en", "pl"], help="OCR codes, e.g. en de pl bg")
+    parser.add_argument("--lang", nargs="+", default=["en", "pl"], help="Codes/names or europe/europe-latin; see --list-languages")
     parser.add_argument("--layout", choices=["reels", "tiktok", "fixed"], default="reels")
     parser.add_argument("--roi", help="Fixed crop x,y,width,height in the resized 540x960 frame")
     args = parser.parse_args(argv)
+    try:
+        resolve_languages(args.lang, args.engine)
+    except ValueError as exc:
+        parser.error(str(exc))
     video = args.video.expanduser().resolve()
     if not video.is_file():
         parser.error(f"Video not found: {video}")
