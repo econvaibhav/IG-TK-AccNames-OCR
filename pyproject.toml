@@ -3,8 +3,8 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "instagram-account-ocr"
-version = "0.3.0"
+name = "ig-tk-accnames-ocr"
+version = "0.4.0"
 description = "Reviewable account-label extraction from social-media screen recordings"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -15,6 +15,8 @@ excel = ["openpyxl>=3.1,<4", "Pillow>=10"]
 paddle = ["paddleocr>=3.7,<3.8", "paddlepaddle>=3.2,<4"]
 
 [project.scripts]
+ig-tk-accnames-ocr = "instagram_ocr.__main__:main"
+# Retain the original command for existing scripts.
 instagram-ocr = "instagram_ocr.__main__:main"
 
 [tool.setuptools.packages.find]

@@ -101,7 +101,7 @@ document.querySelector("#close").addEventListener("click", () => lightbox.close(
 window.addEventListener("beforeunload", event => {if (dirty.size) {event.preventDefault();event.returnValue = "";}});
 async function connect() {
   if (location.protocol === "file:") {
-    status(connection, "Preview only. To save edits, run: python -m instagram_ocr review <this results folder>");
+    status(connection, "Preview only. To save edits, run: ig-tk-accnames-ocr review <this results folder>");
     return;
   }
   try {

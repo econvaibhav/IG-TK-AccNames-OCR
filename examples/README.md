@@ -7,7 +7,7 @@ The visible account is `thestoryofourhome.pl`.
 reading remains uncorrected so you can try the review yourself:
 
 ```bash
-python -m instagram_ocr review examples/review_demo
+ig-tk-accnames-ocr review examples/review_demo
 ```
 
 Edit the hyphen to a dot, leave **Mark as reviewed** checked, and click **Save
