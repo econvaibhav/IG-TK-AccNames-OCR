@@ -1,2 +1,2 @@
 path,status,needs_review,review_reasons,forward_names,reverse_names,union_names,matches,duration_seconds,error
-examples/part_16_reel.mp4,agreement,True,"[""nonstandard_label""]","[{""name"": ""thestoryofourhome-pl"", ""votes"": 3}]","[{""name"": ""thestoryofourhome-pl"", ""votes"": 3}]","[""thestoryofourhome-pl""]","[{""forward"": ""thestoryofourhome-pl"", ""reverse"": ""thestoryofourhome-pl"", ""similarity"": 1.0}]",8.842166666666667,
+examples/iltalehti_reel.mp4,agreement,False,[],"[{""name"": ""iltalehti"", ""votes"": 3}]","[{""name"": ""iltalehti"", ""votes"": 3}]","[""iltalehti""]","[{""forward"": ""iltalehti"", ""reverse"": ""iltalehti"", ""similarity"": 1.0}]",50.9,

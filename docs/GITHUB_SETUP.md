@@ -4,15 +4,18 @@ The downloaded project already includes a local Git repository and its commits.
 Push that repository to retain the files and their history. Keep the `.git`
 directory when moving the project. You do not need another initial commit.
 
+The destination `econvaibhav/IG-TK-AccNames-OCR` already exists and is empty.
+After signing in, follow step 3 to push the prepared repository directly.
+
 ## 1. Download and extract on Fedora
 
 Save `IG-TK-AccNames-OCR.zip` in Downloads, then open Terminal:
 
 ```bash
 sudo dnf install git gh unzip
-mkdir -p ~/Projects/IG-TK-AccNames-OCR-upload
-unzip ~/Downloads/IG-TK-AccNames-OCR.zip -d ~/Projects/IG-TK-AccNames-OCR-upload
-cd ~/Projects/IG-TK-AccNames-OCR-upload/IG-TK-AccNames-OCR
+mkdir -p ~/Projects/IG-TK-AccNames-OCR-Iltalehti
+unzip ~/Downloads/IG-TK-AccNames-OCR.zip -d ~/Projects/IG-TK-AccNames-OCR-Iltalehti
+cd ~/Projects/IG-TK-AccNames-OCR-Iltalehti/IG-TK-AccNames-OCR
 ```
 
 Use a fresh extraction folder for this updated package. If you have already
@@ -39,51 +42,26 @@ gh auth setup-git
 Follow the browser instructions and sign in as `econvaibhav`. The `workflow`
 scope allows uploading the included GitHub Actions workflow.
 
-## 3. Create and upload the new repository
+## 3. Push to the existing repository
 
-If `econvaibhav/IG-TK-AccNames-OCR` does not exist yet, run:
-
-```bash
-gh repo create econvaibhav/IG-TK-AccNames-OCR \
-  --public \
-  --source=. \
-  --remote=origin \
-  --push
-```
-
-This creates a public repository and uploads the local commits. Change
-`--public` to `--private` if you want a private repository.
-
-Open <https://github.com/econvaibhav/IG-TK-AccNames-OCR>. The README, screenshots,
-LaTeX workflow, example clip and code are included. The Actions tab shows the
-automated Python checks once they run.
-
-### If you already created an empty destination
-
-Skip the `gh repo create` command and use:
+The empty `econvaibhav/IG-TK-AccNames-OCR` repository is already created.
+From the extracted project folder, run:
 
 ```bash
 git remote add origin https://github.com/econvaibhav/IG-TK-AccNames-OCR.git
 git push -u origin main
 ```
 
-If `origin` is already configured, inspect it with `git remote -v`, then update
-its address if necessary:
+If Git says `remote origin already exists`, set its address and push:
 
 ```bash
 git remote set-url origin https://github.com/econvaibhav/IG-TK-AccNames-OCR.git
 git push -u origin main
 ```
 
-### If you already uploaded the earlier package
-
-Open your existing repository on GitHub, go to **Settings → General**, and
-change its repository name to **IG-TK-AccNames-OCR**. From this updated local
-package, add the new address as `origin` and push with the commands above.
-
-The earlier commits are retained, and the new changes extend them. If you added
-other commits on GitHub in the meantime and Git rejects the push, stop and check
-those changes before proceeding. Do not use a force push to bypass them.
+Open <https://github.com/econvaibhav/IG-TK-AccNames-OCR>. The README, Iltalehti
+example, screenshots, LaTeX workflow, code and all 27 prepared commits are
+included. The Actions tab shows the automated Python checks once they run.
 
 ## 4. Run it locally
 
@@ -97,10 +75,17 @@ bash setup_laptop.sh --paddle
 .venv/bin/ig-tk-accnames-ocr review examples/review_demo
 ```
 
-The demo is the included real Reel, with its original uncorrected reading.
-Change `thestoryofourhome-pl` to `thestoryofourhome.pl`, leave **Mark as reviewed**
-checked, and click **Save changes**. An already-correct name can be saved
-unchanged. **Download Excel** contains the saved decisions for the whole run.
+The demo is the included 50.9-second Iltalehti Reel from a Finnish news-media
+account, with its original `iltalehti` reading. Inspect the frames, leave the
+name unchanged and **Mark as reviewed** checked, then click **Save changes**.
+The page shows **Confirmed**. **Download Excel** contains the saved decisions
+for the whole run, with `["iltalehti"]` in this row's `final_names`.
+
+To run OCR again on the included clip with English and Finnish selected:
+
+```bash
+.venv/bin/python run_laptop_test.py --engine paddle --lang en fi
+```
 
 To reopen existing results with the new interface:
 
@@ -145,11 +130,9 @@ cd IG-TK-AccNames-OCR
 git remote remove origin
 ```
 
-Then use the GitHub creation/upload steps above.
+Then follow the sign-in and push steps above.
 
 ## Official documentation
 
 - [GitHub CLI installation on Linux](https://github.com/cli/cli/blob/trunk/docs/install_linux.md)
 - [Sign in with GitHub CLI](https://cli.github.com/manual/gh_auth_login)
-- [Create a repository from local source](https://cli.github.com/manual/gh_repo_create)
-- [Rename a GitHub repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/renaming-a-repository)

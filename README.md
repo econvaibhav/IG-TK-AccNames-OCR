@@ -14,8 +14,7 @@ Swedish, German, Polish, Spanish and Portuguese, plus English. Use
 
 ![Account review page with frame evidence, account names, review checkboxes and Excel export](visuals/Review_Preview.png)
 
-*The included real sample after saving `thestoryofourhome.pl`: the review is
-marked Corrected and Excel is up to date.*
+*Example from a Finnish news-media Instagram video (Iltalehti).*
 
 [Quick start](#quick-start-on-fedora) · [Review and Excel](#review-and-excel) ·
 [Languages](#languages-and-ocr-models) · [Process a folder](#process-a-folder) ·
@@ -36,7 +35,7 @@ marked Corrected and Excel is up to date.*
 - Updates one Excel workbook for the entire run, while retaining original OCR
   results and saved correction history.
 
-An **account label** can be a handle such as `thestoryofourhome.pl` or a display
+An **account label** can be a handle such as `iltalehti` or a display
 name such as `Новини България`. These are different things: OCR reads the visible
 label; it does not look up the account or establish its identity. The review
 accepts Unicode names, spaces and punctuation, including commas.
@@ -50,7 +49,7 @@ sudo dnf install -y git python3.12
 git clone https://github.com/econvaibhav/IG-TK-AccNames-OCR.git
 cd IG-TK-AccNames-OCR
 bash setup_laptop.sh --paddle
-.venv/bin/python run_laptop_test.py --engine paddle
+.venv/bin/python run_laptop_test.py --engine paddle --lang en fi
 ```
 
 If you downloaded the project as a ZIP, extract it, open a terminal inside
@@ -63,7 +62,8 @@ installs CPU versions of the OCR dependencies. The first OCR run downloads model
 weights into `models/`. Later runs reuse them. OCR inference and review run on
 your computer.
 
-The included `examples/part_16_reel.mp4` is a real **8.8-second Reel**. The test
+The included `examples/iltalehti_reel.mp4` is a real **50.9-second Iltalehti Reel**
+from a Finnish news-media account. The test
 creates a new `results/laptop_...` folder and opens its review page. Keep the
 terminal open while reviewing. If the browser does not open, use the
 `http://127.0.0.1:.../` address printed in the terminal. Press **Ctrl+C** to stop the
@@ -73,7 +73,7 @@ To install and try only the existing EasyOCR option:
 
 ```bash
 bash setup_laptop.sh
-.venv/bin/python run_laptop_test.py
+.venv/bin/python run_laptop_test.py --lang en
 ```
 
 Python 3.12 on Linux CPU is the tested setup. The package declares Python 3.10 or
@@ -83,16 +83,16 @@ wheels. You can choose another installed interpreter with
 
 ### Open a ready-made review
 
-The repository includes the real sample's EasyOCR output, so you can try editing
-without running OCR or downloading model weights. After setup:
+The repository includes the real sample's PaddleOCR output, so you can try the
+review without running OCR or downloading model weights. After setup:
 
 ```bash
 .venv/bin/ig-tk-accnames-ocr review examples/review_demo
 ```
 
-The original reading is `thestoryofourhome-pl`. Inspect the frames, change the
-hyphen to a dot so it reads `thestoryofourhome.pl`, and click **Save changes**.
-The page should show **Corrected**. Download Excel and check the `final_names`
+The original reading is `iltalehti`. Inspect the frames, leave the name unchanged
+and **Mark as reviewed** checked, then click **Save changes**. The page should
+show **Confirmed**. Download Excel and check the `final_names`
 column, or open `examples/review_demo/reviewed.xlsx` directly.
 
 ### Use your own clip
@@ -184,7 +184,7 @@ runs.
 | `unreadable` | The account cannot be read reliably | Empty list | `True` |
 
 **Use `final_names` together with `review_status` for analysis.** Names are stored
-as a JSON list in the Excel cell, for example `["thestoryofourhome.pl"]`, so a
+as a JSON list in the Excel cell, for example `["iltalehti"]`, so a
 clip can retain more than one account. Draft edits are saved in the review state
 but do not replace the original candidates in `final_names` until accepted.
 
@@ -201,13 +201,13 @@ not discard it.
 
 ### See the review steps
 
-These screenshots use the real `examples/part_16_reel.mp4` supplied with the
+These screenshots use the real `examples/iltalehti_reel.mp4` supplied with the
 project. They illustrate that sample's review, not a multilingual EU benchmark.
 
-**Before review.** The original EasyOCR reading contains a hyphen. The two
-passes agree, but the frame evidence lets you check the punctuation yourself.
+**Before review.** The original PaddleOCR reading is `iltalehti`. The two
+passes agree; inspect the frame evidence to confirm the visible account name.
 
-![Real sample before review, with the original thestoryofourhome-pl reading](visuals/Review_Before.png)
+![Iltalehti sample before review, with the original iltalehti reading](visuals/Review_Before.png)
 
 **Six moments from the same clip.** Existing fixed times and the three time
 quartiles provide crops and full-frame context together.
@@ -219,10 +219,11 @@ the small account crop is ambiguous or appears misplaced.
 
 ![Enlarged full-frame view of the included sample in the review lightbox](visuals/Review_Full_Frame.png)
 
-**Save the correction.** The close-up shows the edited name, review checkboxes
-and saved status. The workbook is refreshed from the same saved review state.
+**Confirm the reading.** The close-up shows the unchanged `iltalehti` name,
+review checkboxes and saved status. The workbook is refreshed from the same
+saved review state.
 
-![Actual corrected form showing thestoryofourhome.pl, review checkboxes and the saved Excel status](visuals/Review_Save.png)
+![Actual confirmed form showing iltalehti, review checkboxes and the saved Excel status](visuals/Review_Save.png)
 
 The complete saved review is shown in the screenshot at the top of this README.
 
@@ -410,13 +411,13 @@ profile images inside it and selects the lowest detected circle.
 
 The second ROI starts beside the selected circle and measures **380 × 40**
 working pixels. Bounds checks keep it inside the image. In the sample's
-3-second frame, this produces `(x=74, y=761, width=380, height=40)`.
+3-second frame, this produces `(x=75, y=751, width=380, height=40)`.
 
 ![Second ROI: the selected profile circle and adjoining account-text crop](visuals/ROI_02_account_crop.png)
 
 ### 3. Read the crop and retain the evidence
 
-![Enlarged final account crop showing thestoryofourhome.pl and the Follow control](visuals/ROI_03_account_text.png)
+![Enlarged final account crop showing iltalehti and the Follow control](visuals/ROI_03_account_text.png)
 
 OCR reads this crop. Candidate filtering removes common interface text such as
 `Follow` and `Following`, while preserving uncertain readings for review. If no
@@ -511,11 +512,12 @@ On the included sample, the checked CPU runs produced:
 
 | Engine | Forward reading | Reverse reading | Visible label |
 | --- | --- | --- | --- |
-| EasyOCR 1.7.2 | `thestoryofourhome-pl` · 3 votes | `thestoryofourhome-pl` · 3 votes | `thestoryofourhome.pl` |
-| PP-OCRv6 small | `thestoryofourhome.pl` · 3 votes | `thestoryofourhome.pl` · 3 votes | `thestoryofourhome.pl` |
+| EasyOCR 1.7.2 (`en`) | `iltalehti` · 3 votes | `iltalehti` · 3 votes | `iltalehti` |
+| PP-OCRv6 small (`en fi`) | `iltalehti` · 3 votes | `iltalehti` · 3 votes | `iltalehti` |
 
-This is a worked example, not a comparative accuracy benchmark. The EasyOCR
-result illustrates why agreeing passes still benefit from visual review.
+Both runs report agreement with no automatic review flags. This is one worked
+example, not an accuracy benchmark; the review still lets you check and confirm
+the reading against the frames.
 
 The `europe` preset also passed a CPU integration check with all three actual
 recognizers: synthetic `Новини България` (Bulgarian), `Νέα Ευρώπη` (Greek) and

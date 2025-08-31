@@ -1,10 +1,10 @@
 {
-  "version": "0.2.0",
-  "created_utc": "2026-09-27T09:13:22.261512+00:00",
+  "version": "0.4.0",
+  "created_utc": "2026-09-27T10:54:55.437719+00:00",
   "config": {
     "languages": [
       "en",
-      "pl"
+      "fi"
     ],
     "gpu": false,
     "layout": "reels",
@@ -30,17 +30,27 @@
     "fixed_roi": null
   },
   "requested_layout": "reels",
-  "source": "examples/part_16_reel.mp4",
+  "requested_languages": [
+    "en",
+    "fi"
+  ],
+  "source": "examples/iltalehti_reel.mp4",
   "video_count": 1,
   "dependencies": {
     "easyocr": "1.7.2",
     "torch": "2.14.0+cpu",
     "opencv-python-headless": "4.14.0.94",
+    "opencv-contrib-python": "4.10.0.84",
     "numpy": "2.3.5",
     "paddleocr": "3.7.0",
     "paddlepaddle": "3.3.1",
     "paddlex": "3.7.2"
   },
-  "engine": "easyocr",
-  "paddle_size": null
+  "engine": "paddle",
+  "paddle_size": "small",
+  "paddle_mkldnn": false,
+  "model_names": [
+    "PP-OCRv6_small_det",
+    "PP-OCRv6_small_rec"
+  ]
 }

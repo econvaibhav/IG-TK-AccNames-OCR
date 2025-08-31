@@ -12,7 +12,7 @@ import sys
 from instagram_ocr.languages import ListLanguagesAction, resolve_languages
 
 ROOT = Path(__file__).resolve().parent
-SAMPLE = ROOT / "examples" / "part_16_reel.mp4"
+SAMPLE = ROOT / "examples" / "iltalehti_reel.mp4"
 
 
 def main(argv=None):
@@ -78,7 +78,7 @@ def main(argv=None):
                 print(f"{direction.title()}: {readings}", flush=True)
             if video == SAMPLE.resolve():
                 # A human-read reference for checking this sample. Never used as OCR input.
-                print("Visible reference in the sample: thestoryofourhome.pl", flush=True)
+                print("Visible reference in the sample: iltalehti", flush=True)
             if row.get("error"):
                 print("Processing error:", row["error"], file=sys.stderr)
     if (destination / "review.html").is_file():

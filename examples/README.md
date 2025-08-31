@@ -1,16 +1,24 @@
 # Example clip and review
 
-`part_16_reel.mp4` is the unchanged 8.8-second Reel from the supplied example.
-The visible account is `thestoryofourhome.pl`.
+`iltalehti_reel.mp4` is the unchanged supplied `part_46.mp4`, renamed for this
+example. It is a 50.9-second, 60-fps, 720 × 1600 Reel from the Finnish news-media
+account `iltalehti`.
 
-`review_demo/` contains a real EasyOCR run. Its repeated `thestoryofourhome-pl`
-reading remains uncorrected so you can try the review yourself:
+`review_demo/` contains a real PaddleOCR run with `--lang en fi`. Both passes
+read `iltalehti` with three votes. The result remains unreviewed so you can try
+confirming it yourself:
 
 ```bash
-ig-tk-accnames-ocr review examples/review_demo
+.venv/bin/ig-tk-accnames-ocr review examples/review_demo
 ```
 
-Edit the hyphen to a dot, leave **Mark as reviewed** checked, and click **Save
-changes**. The shared `reviewed.xlsx` will contain the correction. For a name
-that is already right, simply save without editing. The reference name is never
-passed to the OCR engine as an expected answer.
+Inspect the frames, leave `iltalehti` unchanged and **Mark as reviewed** checked,
+and click **Save changes**. The page shows **Confirmed** and `reviewed.xlsx`
+contains `["iltalehti"]` in `final_names`. The reference name is never passed
+to the OCR engine as an expected answer.
+
+To compute a fresh result from the included clip:
+
+```bash
+.venv/bin/python run_laptop_test.py --engine paddle --lang en fi
+```

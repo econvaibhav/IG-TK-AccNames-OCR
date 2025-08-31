@@ -1,6 +1,7 @@
-"""Recreate the README's crop figures from the included, unmodified sample.
+"""Recreate the README's crop figures from the included Iltalehti sample.
 
-Run from the repository root: python visuals/render_rois.py
+Run from the repository root: .venv/bin/python visuals/render_rois.py
+Use the same environment as the OCR run: OpenCV versions can shift circle fits.
 All reported coordinates refer to the 540 x 960 resized video frame.
 """
 from pathlib import Path
@@ -38,7 +39,7 @@ def line(draw, points):
 
 def main():
     output = Path(__file__).resolve().parent
-    cap = cv2.VideoCapture(str(ROOT / "examples" / "part_16_reel.mp4"))
+    cap = cv2.VideoCapture(str(ROOT / "examples" / "iltalehti_reel.mp4"))
     if not cap.isOpened():
         raise RuntimeError("Cannot open the sample clip")
     try:
@@ -128,7 +129,8 @@ def main():
     rectangle(draw, (30, 89, 1170, 209))
     text(draw, (30, 239), "380 x 40 pixels, enlarged 3x. Interface labels such as Follow are filtered after OCR.", 22)
     stage3.save(output / "ROI_03_account_text.png")
-    print(f"Frame {frame_index}; circle center={center}, radius={radius}; account crop={box}")
+    print(f"OpenCV {cv2.__version__}; frame {frame_index}; circle center={center}, "
+          f"radius={radius}; account crop={box}")
 
 
 if __name__ == "__main__":

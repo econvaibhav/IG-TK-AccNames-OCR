@@ -85,8 +85,9 @@
 \draw[flow] (review) -- (state);
 \draw[flow] (original.south) -- ++(0,-.45) -| ($(excel.north)+(-2.6,0)$);
 \draw[flow] (state.south) -- ++(0,-.45) -| ($(excel.north)+(2.6,0)$);
-\node[note,text width=15.3cm] at (4.7,-19.9) {
-  Example: \texttt{thestoryofourhome-pl} $\rightarrow$ \texttt{thestoryofourhome.pl}; a punctuation correction.\\[3pt]
+\node[note,text width=15.3cm] at (4.7,-20.15) {
+  Example from a Finnish news-media Instagram video (Iltalehti).\\[3pt]
+  Visible handle: \texttt{iltalehti}. A matching reading can be confirmed unchanged.\\[3pt]
   Review $\rightarrow$ Excel is one-way. Editing Excel does not change the review.\\
   Corrections update the saved result; they do not retrain the OCR reader.};
 \end{tikzpicture}

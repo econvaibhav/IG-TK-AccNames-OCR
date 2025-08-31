@@ -33,7 +33,7 @@ folders.json
 *.synctex.gz
 .review.lock
 # Keep the single supplied example usable after a GitHub checkout.
-!examples/part_16_reel.mp4
+!examples/iltalehti_reel.mp4
 !examples/review_demo/screenshots/
 !examples/review_demo/screenshots/**
 !examples/review_demo/results.xlsx
