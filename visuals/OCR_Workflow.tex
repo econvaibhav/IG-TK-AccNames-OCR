@@ -24,13 +24,17 @@
   Instagram: profile search strip $\rightarrow$ lowest circle\\
   $\rightarrow$ adjacent $380\times40$ account crop.\\[4pt]
   TikTok: fixed lower-left region, or a custom ROI.};
-\node[box] (reader) at (0,-6.5) {
-  \textbf{Choose the reader and script}\\
-  EasyOCR language codes or Paddle script models.\\
-  Use a matching Latin or Cyrillic reader.\\[4pt]
-  OCR returns text and confidence for each crop.\\
-  Keep candidate names; remove interface labels.};
-\node[box] (votes) at (0,-10.1) {
+\node[box] (reader) at (0,-6.8) {
+  \textbf{Choose the reader and languages}\\
+  \texttt{-{}-lang europe} or \texttt{-{}-lang en bg}\\[4pt]
+  Paddle: 32 language options, three readers.\\
+  Latin v6; Cyrillic and Greek v5.\\[4pt]
+  English, Bulgarian, Croatian, French, Hungarian,\\
+  Finnish, Swedish, German, Polish, Spanish,\\
+  Portuguese and other European languages.\\
+  See \texttt{-{}-list-languages} for codes.\\[4pt]
+  Read text and confidence; remove interface labels.};
+\node[box] (votes) at (0,-10.8) {
   \textbf{Read forward and backward}\\
   Sample frames in each direction.\\
   Count one vote per name in each frame;\\
@@ -48,25 +52,25 @@
   Enlarge images to inspect the visible name.\\[5pt]
   {\fontsize{8}{10}\selectfont $T$ is clip duration. Unavailable fixed times are marked.\\
   Requested times can select the same frame.}};
-\node[box,minimum height=2.25cm] (review) at (9.4,-10.1) {
+\node[box,minimum height=2.25cm] (review) at (9.4,-10.8) {
   \textbf{Check the name in the browser}\\
   Tick \emph{Mark as reviewed}; keep a correct name unchanged.\\
   Edit the name only when a correction is needed.\\
   Tick \emph{Cannot read} when the evidence is unclear.\\[4pt]
   Add an optional note; press \emph{Save changes}.};
-\node[box] (original) at (0,-13.7) {
+\node[box] (original) at (0,-14.4) {
   \textbf{Preserve the original readings}\\
   Keep raw text, confidence, vote counts,\\
   frame positions, engine and run settings.\\[4pt]
   Agreement between passes is supporting evidence,\\
   not verification of the account's identity.};
-\node[box] (state) at (9.4,-13.7) {
+\node[box] (state) at (9.4,-14.4) {
   \textbf{Store the review decision}\\
   Infer \emph{confirmed} or \emph{corrected} from the name;\\
   keep unreadable clips unresolved.\\[4pt]
   Retain notes and correction history.\\
   Reopening the review restores saved decisions.};
-\node[box,text width=10.7cm] (excel) at (4.7,-17.15) {
+\node[box,text width=10.7cm] (excel) at (4.7,-17.85) {
   \textbf{Update and download Excel}\\
   \texttt{reviewed.xlsx}: one row per clip, original readings alongside\\
   \texttt{final\_names}, \texttt{review\_status} and reviewer notes.\\[4pt]
@@ -81,7 +85,7 @@
 \draw[flow] (review) -- (state);
 \draw[flow] (original.south) -- ++(0,-.45) -| ($(excel.north)+(-2.6,0)$);
 \draw[flow] (state.south) -- ++(0,-.45) -| ($(excel.north)+(2.6,0)$);
-\node[note,text width=15.3cm] at (4.7,-19.2) {
+\node[note,text width=15.3cm] at (4.7,-19.9) {
   Example: \texttt{thestoryofourhome-pl} $\rightarrow$ \texttt{thestoryofourhome.pl}; a punctuation correction.\\[3pt]
   Review $\rightarrow$ Excel is one-way. Editing Excel does not change the review.\\
   Corrections update the saved result; they do not retrain the OCR reader.};
