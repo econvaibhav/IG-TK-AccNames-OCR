@@ -1,4 +1,4 @@
-"""Command line: ig-tk-accnames-ocr --help (or python -m instagram_ocr)."""
+"""Command line: ig-tk-accnames-ocr --help (or python -m ig_tk_ocr)."""
 
 import argparse
 from dataclasses import asdict, replace

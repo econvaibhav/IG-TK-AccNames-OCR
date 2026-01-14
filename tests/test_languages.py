@@ -8,12 +8,12 @@ import unittest
 from types import SimpleNamespace
 from unittest.mock import patch
 
-from instagram_ocr.__main__ import main
-from instagram_ocr.core import Config
-from instagram_ocr.engines import paddle_recognizers
-from instagram_ocr.languages import (EUROPE_LANGUAGES, LANGUAGE_PRESETS,
+from ig_tk_ocr.__main__ import main
+from ig_tk_ocr.core import Config
+from ig_tk_ocr.engines import paddle_recognizers
+from ig_tk_ocr.languages import (EUROPE_LANGUAGES, LANGUAGE_PRESETS,
     expand_languages, resolve_languages)
-from instagram_ocr.vision import make_reader
+from ig_tk_ocr.vision import make_reader
 import run_laptop_test
 
 
@@ -88,8 +88,8 @@ class LanguageCatalogTests(unittest.TestCase):
                 output = root / mode
                 def fake_video(path, reader, config, screenshot_root):
                     return {"path": str(path), "status": "no_text", "union_names": []}
-                with patch("instagram_ocr.__main__.make_reader", return_value=SimpleNamespace(model_names=["test"])) as reader, \
-                     patch("instagram_ocr.__main__.process_video", side_effect=fake_video), \
+                with patch("ig_tk_ocr.__main__.make_reader", return_value=SimpleNamespace(model_names=["test"])) as reader, \
+                     patch("ig_tk_ocr.__main__.process_video", side_effect=fake_video), \
                      redirect_stdout(io.StringIO()):
                     command = (["run", str(clip)] if mode == "run" else
                                ["batch", str(manifest), "--task-id", "1"])

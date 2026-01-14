@@ -2,8 +2,8 @@ import tempfile
 from pathlib import Path
 import unittest
 
-from instagram_ocr.core import Config, Votes, clean_candidates, compare_passes, frame_indices, handle_like
-from instagram_ocr.files import discover_videos, make_manifest, pick_task, platform_from_path
+from ig_tk_ocr.core import Config, Votes, clean_candidates, compare_passes, frame_indices, handle_like
+from ig_tk_ocr.files import discover_videos, make_manifest, pick_task, platform_from_path
 
 
 class SamplingTests(unittest.TestCase):

@@ -1,9 +1,9 @@
 import unittest
 from types import SimpleNamespace
 
-from instagram_ocr.core import Votes, clean_candidates
-from instagram_ocr.engines import PaddleReader, paddle_recognizers
-from instagram_ocr.__main__ import parser
+from ig_tk_ocr.core import Votes, clean_candidates
+from ig_tk_ocr.engines import PaddleReader, paddle_recognizers
+from ig_tk_ocr.__main__ import parser
 
 
 class LanguageTests(unittest.TestCase):

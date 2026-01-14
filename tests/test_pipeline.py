@@ -8,10 +8,10 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from instagram_ocr.core import Config
-from instagram_ocr.files import save_csv, save_review
-from instagram_ocr.pipeline import process_video, scan
-from instagram_ocr.vision import open_video
+from ig_tk_ocr.core import Config
+from ig_tk_ocr.files import save_csv, save_review
+from ig_tk_ocr.pipeline import process_video, scan
+from ig_tk_ocr.vision import open_video
 
 
 class Capture:
@@ -27,8 +27,8 @@ class Capture:
 
 class PipelineTests(unittest.TestCase):
     def test_no_circle_never_accesses_undefined_results(self):
-        with patch("instagram_ocr.pipeline.cv_module", return_value=SimpleNamespace(CAP_PROP_POS_FRAMES=1)), \
-             patch("instagram_ocr.pipeline.crop_frame", return_value=(object(), None, None)):
+        with patch("ig_tk_ocr.pipeline.cv_module", return_value=SimpleNamespace(CAP_PROP_POS_FRAMES=1)), \
+             patch("ig_tk_ocr.pipeline.crop_frame", return_value=(object(), None, None)):
             result = scan(Capture(), 5, 4, None, Config())
         self.assertEqual(result["candidates"], [])
         self.assertEqual(result["crops_found"], 0)
@@ -36,7 +36,7 @@ class PipelineTests(unittest.TestCase):
     def test_capture_released_even_when_processing_raises(self):
         cap = Capture()
         cv = SimpleNamespace(VideoCapture=lambda path: cap, CAP_PROP_FPS=1, CAP_PROP_FRAME_COUNT=2)
-        with patch("instagram_ocr.vision.cv_module", return_value=cv):
+        with patch("ig_tk_ocr.vision.cv_module", return_value=cv):
             with self.assertRaises(RuntimeError):
                 with open_video("test.mp4"):
                     raise RuntimeError("OCR failed")
@@ -44,8 +44,8 @@ class PipelineTests(unittest.TestCase):
 
     def test_early_exit_counts_frames_once_and_keeps_raw_text(self):
         reader = SimpleNamespace(readtext=lambda *a, **k: [(None,"alpha",0.9),(None,"alpha",0.8)])
-        with patch("instagram_ocr.pipeline.cv_module", return_value=SimpleNamespace(CAP_PROP_POS_FRAMES=1)), \
-             patch("instagram_ocr.pipeline.crop_frame", return_value=(None, object(), (1,2,3,4))):
+        with patch("ig_tk_ocr.pipeline.cv_module", return_value=SimpleNamespace(CAP_PROP_POS_FRAMES=1)), \
+             patch("ig_tk_ocr.pipeline.crop_frame", return_value=(None, object(), (1,2,3,4))):
             result = scan(Capture(), 10, 100, reader, Config(min_votes=3))
         self.assertEqual(result["frames_attempted"], 3)
         self.assertEqual(result["candidates"], [{"name":"alpha", "votes":3}])
@@ -53,7 +53,7 @@ class PipelineTests(unittest.TestCase):
         self.assertTrue(result["enough_votes"])
 
     def test_all_decode_failures_are_explicit(self):
-        with patch("instagram_ocr.pipeline.cv_module", return_value=SimpleNamespace(CAP_PROP_POS_FRAMES=1)):
+        with patch("ig_tk_ocr.pipeline.cv_module", return_value=SimpleNamespace(CAP_PROP_POS_FRAMES=1)):
             result = scan(Capture(False), 10, 4, None, Config())
         self.assertEqual(result["decode_failures"], 4)
         self.assertFalse(result["enough_votes"])
@@ -63,7 +63,7 @@ class PipelineTests(unittest.TestCase):
         def video(path): yield Capture(), 10, 100
         data = {"candidates":[{"name":"name-with-hyphen", "votes":11}],
                 "enough_votes":True, "decode_failures":0}
-        with patch("instagram_ocr.pipeline.open_video", video), patch("instagram_ocr.pipeline.scan", return_value=data):
+        with patch("ig_tk_ocr.pipeline.open_video", video), patch("ig_tk_ocr.pipeline.scan", return_value=data):
             result = process_video("a.mp4", None, Config())
         self.assertEqual(result["status"], "agreement")
         self.assertTrue(result["needs_review"])

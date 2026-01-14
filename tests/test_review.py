@@ -9,9 +9,9 @@ from unittest.mock import patch
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
-from instagram_ocr.core import Config
-from instagram_ocr.pipeline import screenshots
-from instagram_ocr.review import Conflict, ReviewStore, make_server, row_id
+from ig_tk_ocr.core import Config
+from ig_tk_ocr.pipeline import screenshots
+from ig_tk_ocr.review import Conflict, ReviewStore, make_server, row_id
 
 
 class ReviewTests(unittest.TestCase):
@@ -88,7 +88,7 @@ class ReviewTests(unittest.TestCase):
         self.assertTrue(row["needs_manual_review"])
 
     def test_excel_lock_keeps_correction_durable(self):
-        with patch("instagram_ocr.excel.save_excel", side_effect=PermissionError("locked")):
+        with patch("ig_tk_ocr.excel.save_excel", side_effect=PermissionError("locked")):
             errors = self.store.save(self.payload)
         self.assertIn("reviewed.xlsx", errors[0])
         self.assertEqual(ReviewStore(self.folder).state["revision"], 1)
@@ -129,7 +129,7 @@ class FrameTests(unittest.TestCase):
             def read(self): return True, np.zeros((96,54,3),dtype=np.uint8)
         for count in (4,100):
             cap = Capture(); cap.indices = []
-            with tempfile.TemporaryDirectory() as tmp, patch("instagram_ocr.pipeline.crop_frame",return_value=(np.zeros((96,54,3),dtype=np.uint8),None,None)):
+            with tempfile.TemporaryDirectory() as tmp, patch("ig_tk_ocr.pipeline.crop_frame",return_value=(np.zeros((96,54,3),dtype=np.uint8),None,None)):
                 shots = screenshots(cap,10,count,Config(),Path(tmp))
                 self.assertEqual(len(shots), 6)
                 self.assertTrue(all(0 <= index < count for index in cap.indices))

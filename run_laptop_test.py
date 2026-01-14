@@ -9,7 +9,7 @@ import os
 from pathlib import Path
 import sys
 
-from instagram_ocr.languages import ListLanguagesAction, resolve_languages
+from ig_tk_ocr.languages import ListLanguagesAction, resolve_languages
 
 ROOT = Path(__file__).resolve().parent
 SAMPLE = ROOT / "examples" / "iltalehti_reel.mp4"
@@ -49,7 +49,7 @@ def main(argv=None):
         import torch
         torch.set_num_threads(min(4, max(1, os.cpu_count() or 1)))
 
-    from instagram_ocr.__main__ import main as run_ocr
+    from ig_tk_ocr.__main__ import main as run_ocr
 
     destination = ROOT / "results" / datetime.now().strftime("laptop_%Y%m%d_%H%M%S_%f")
     print(f"Video: {video.name}", flush=True)
@@ -84,7 +84,7 @@ def main(argv=None):
     if (destination / "review.html").is_file():
         print(f"\nResults: {destination}", flush=True)
         if not args.no_review:
-            from instagram_ocr.review import serve
+            from ig_tk_ocr.review import serve
             serve(destination, open_browser=not args.no_open)
     if code:
         print("The run needs attention. Keep the terminal output and the results folder.", file=sys.stderr)

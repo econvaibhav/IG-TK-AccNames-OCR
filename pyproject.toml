@@ -15,12 +15,12 @@ excel = ["openpyxl>=3.1,<4", "Pillow>=10"]
 paddle = ["paddleocr>=3.7,<3.8", "paddlepaddle>=3.2,<4"]
 
 [project.scripts]
-ig-tk-accnames-ocr = "instagram_ocr.__main__:main"
+ig-tk-accnames-ocr = "ig_tk_ocr.__main__:main"
 # Retain the original command for existing scripts.
-instagram-ocr = "instagram_ocr.__main__:main"
+instagram-ocr = "ig_tk_ocr.__main__:main"
 
 [tool.setuptools.packages.find]
-include = ["instagram_ocr*"]
+include = ["ig_tk_ocr*"]
 
 [tool.setuptools.package-data]
-instagram_ocr = ["static/*.js", "static/*.css"]
+ig_tk_ocr = ["static/*.js", "static/*.css"]

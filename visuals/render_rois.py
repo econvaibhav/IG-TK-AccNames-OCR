@@ -11,8 +11,8 @@ from PIL import Image, ImageDraw, ImageFont
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-from instagram_ocr.core import Config
-from instagram_ocr.vision import crop_frame
+from ig_tk_ocr.core import Config
+from ig_tk_ocr.vision import crop_frame
 
 
 def font(size, bold=False):
