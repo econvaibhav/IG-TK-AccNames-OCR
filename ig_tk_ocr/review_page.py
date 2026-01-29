@@ -52,8 +52,8 @@ def save_review(results, path):
 <p class="hint">Keep the name if it is correct, or edit it. Use one line per account. Display names and all languages are welcome.</p>
 <label>Note <span class="optional">(optional)</span><input name="notes" maxlength="2000" placeholder="e.g. Dot before pl, not a hyphen"></label>
 <div class="save-row"><button type="submit" disabled>Save changes</button><span class="save-status" role="status">Start the local review server to edit.</span></div></form></article>''')
-    path.write_text('''<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>IG-TK-AccNames-OCR · Review</title><link rel="stylesheet" href="review.css"><script src="review.js" defer></script></head><body>
-<header><div><span class="eyebrow">IG-TK-AccNames-OCR · INSTAGRAM / TIKTOK</span><h1>Review the evidence.<br>Keep the right name.</h1><p>Inspect six moments, check the account name, and save to Excel.</p></div><div class="progress"><strong id="count">—</strong><span>clips resolved</span></div></header>
+    path.write_text('''<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>IG/TK Review</title><link rel="stylesheet" href="review.css"><script src="review.js" defer></script></head><body>
+<header><div><span class="eyebrow">IG-TK-AccNames-OCR · INSTAGRAM / TIKTOK</span><h1>IG/TK Review</h1></div><div class="progress"><strong id="count">—</strong><span>clips resolved</span></div></header>
 <nav><label class="search">Find a clip or account<input id="search" type="search" placeholder="Search filenames and names"></label><label class="filter"><input id="pending" type="checkbox"> Unresolved only</label><div class="downloads"><a href="reviewed.xlsx" download>Download Excel</a><button id="export" type="button" disabled>Refresh Excel</button></div></nav>
 <p id="connection" role="status">Connecting to the local review server…</p>
 <main>''' + ''.join(cards) + '''</main><p id="empty" hidden>No clips match this filter.</p>
