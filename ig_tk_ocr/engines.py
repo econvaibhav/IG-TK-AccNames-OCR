@@ -1,5 +1,6 @@
 """PaddleOCR 3 adapter; the voting pipeline keeps one common detection format."""
 
+import importlib.util
 from pathlib import Path
 import shutil
 import tarfile
@@ -86,9 +87,12 @@ class PaddleReader:
         self.model_names = [self.detection_model, *self.recognition_models]
         self.last_detection_models = []
         try:
+            if importlib.util.find_spec("paddle") is None:
+                raise ImportError("PaddlePaddle is missing")
             from paddleocr import PaddleOCR
         except ImportError as exc:
-            raise RuntimeError('PaddleOCR is missing. Run: python -m pip install -e ".[paddle,excel]"') from exc
+            raise RuntimeError('PaddleOCR/PaddlePaddle is missing. From the project checkout run: '
+                               'python -m pip install -e ".[paddle]", or bash setup_laptop.sh --paddle.') from exc
         legacy_cache = Path.home() / ".cache" / "instagram-account-ocr"
         default_cache = Path.home() / ".cache" / "ig-tk-accnames-ocr"
         root = Path(model_directory) if model_directory else (

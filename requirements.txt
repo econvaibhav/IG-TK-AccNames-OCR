@@ -1,3 +1,4 @@
-# Includes the project and its OCR dependencies. For Excel: pip install '.[excel]'
+# Base package: video utilities, review UI and Excel exports.
+# Add an OCR engine with: pip install -e '.[easyocr]' or pip install -e '.[paddle]'
+# For a Linux CPU EasyOCR setup, prefer: bash setup_laptop.sh
 -e .
-

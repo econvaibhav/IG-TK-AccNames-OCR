@@ -1,0 +1,11 @@
+include README.md pyproject.toml requirements.txt setup_laptop.sh run_laptop_test.py
+recursive-include ig_tk_ocr *.py *.js *.css
+recursive-include tests *.py
+# Clone the repository for the sample clip, screenshots and precomputed review.
+prune examples
+prune visuals
+prune legacy
+prune models
+prune results
+prune .github
+global-exclude *.py[cod] .DS_Store

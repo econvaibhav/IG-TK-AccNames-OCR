@@ -75,7 +75,9 @@ def make_reader(config, model_directory=None, download_enabled=True, engine="eas
     try:
         import easyocr
     except ImportError as exc:
-        raise RuntimeError("EasyOCR is missing. Run: python -m pip install -e .") from exc
+        raise RuntimeError("EasyOCR is missing. From the project checkout run: "
+                           "python -m pip install -e \".[easyocr]\". "
+                           "For the CPU laptop setup, run bash setup_laptop.sh.") from exc
     kwargs = {"gpu": config.gpu, "download_enabled": download_enabled}
     if model_directory:
         kwargs["model_storage_directory"] = str(model_directory)

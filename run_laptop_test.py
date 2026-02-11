@@ -40,7 +40,9 @@ def main(argv=None):
                if importlib.util.find_spec(name) is None]
     if missing:
         print(f"Missing packages: {', '.join(missing)}", file=sys.stderr)
-        print("Run bash setup_laptop.sh, then .venv/bin/python run_laptop_test.py", file=sys.stderr)
+        setup_flag = " --paddle" if args.engine == "paddle" else ""
+        print(f"Run bash setup_laptop.sh{setup_flag}, then "
+              f".venv/bin/python run_laptop_test.py --engine {args.engine}", file=sys.stderr)
         return 2
 
     os.environ.setdefault("OMP_NUM_THREADS", "1" if args.engine == "paddle" else "4")

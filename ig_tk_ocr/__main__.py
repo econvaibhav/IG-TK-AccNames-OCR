@@ -30,6 +30,7 @@ def roi_arg(value):
 def parser():
     p = argparse.ArgumentParser(prog="ig-tk-accnames-ocr",
                                 description="IG-TK-AccNames-OCR: read account labels from social-media clips.")
+    p.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
     p.add_argument("--list-languages", action=ListLanguagesAction,
                    help="List language codes and presets without loading OCR")
     commands = p.add_subparsers(dest="command", required=True)
