@@ -16,10 +16,9 @@ Swedish, German, Polish, Spanish and Portuguese, plus English. Use
 
 *Example from a Finnish news-media Instagram video (Iltalehti).*
 
-[Quick start](#quick-start-on-fedora) · [Review and Excel](#review-and-excel) ·
-[Languages](#languages-and-ocr-models) · [Process a folder](#process-a-folder) ·
-[How the crop works](#how-the-account-crop-works) · [Troubleshooting](#troubleshooting) ·
-[GitHub setup](docs/GITHUB_SETUP.md)
+[How it works](#how-the-account-crop-works) · [Review and Excel](#review-and-excel) ·
+[Installation](#installation) · [Process a folder](#process-a-folder) ·
+[Languages](#languages-and-ocr-models) · [Troubleshooting](#troubleshooting)
 
 ## What it does
 
@@ -40,124 +39,71 @@ name such as `Новини България`. These are different things: OCR re
 label; it does not look up the account or establish its identity. The review
 accepts Unicode names, spaces and punctuation, including commas.
 
-## Quick start on Fedora
+## How the account crop works
 
-Clone the GitHub repository and run the included sample:
+Every frame is resized to a **540 × 960** working image. Crop coordinates below
+refer to that resized image, not the original video resolution.
 
-```bash
-sudo dnf install -y git python3.12
-git clone https://github.com/econvaibhav/IG-TK-AccNames-OCR.git
-cd IG-TK-AccNames-OCR
-bash setup_laptop.sh --paddle
-.venv/bin/python run_laptop_test.py --engine paddle --lang en fi
-```
+### 1. Find the profile-circle area
 
-If you downloaded the project as a ZIP, extract it, open a terminal inside
-`IG-TK-AccNames-OCR`, and start with `bash setup_laptop.sh --paddle`.
-The installed package is `ig-tk-accnames-ocr` (version **0.4.0**), and its command
-is `.venv/bin/ig-tk-accnames-ocr`.
+For Reels, the first region of interest (ROI) is a narrow strip on the lower
+left: `(x=10, y=560, width=69, height=250)`. The code searches for circular
+profile images inside it and selects the lowest detected circle.
 
-The setup script creates `.venv`, installs the package and Excel support, and
-installs CPU versions of the OCR dependencies. The first OCR run downloads model
-weights into `models/`. Later runs reuse them. OCR inference and review run on
-your computer.
+![First ROI: the lower-left profile-circle search area in the sample frame](visuals/ROI_01_profile_search.png)
 
-The included `examples/iltalehti_reel.mp4` is a real **50.9-second Iltalehti Reel**
-from a Finnish news-media account. The test
-creates a new `results/laptop_...` folder and opens its review page. Keep the
-terminal open while reviewing. If the browser does not open, use the
-`http://127.0.0.1:.../` address printed in the terminal. Press **Ctrl+C** to stop the
-server; saved reviews remain on disk.
+### 2. Crop the adjoining account text
 
-To install and try only the existing EasyOCR option:
+The second ROI starts beside the selected circle and measures **380 × 40**
+working pixels. Bounds checks keep it inside the image. In the sample's
+3-second frame, this produces `(x=75, y=751, width=380, height=40)`.
 
-```bash
-bash setup_laptop.sh
-.venv/bin/python run_laptop_test.py --lang en
-```
+![Second ROI: the selected profile circle and adjoining account-text crop](visuals/ROI_02_account_crop.png)
 
-Python 3.12 on Linux CPU is the tested setup. The package declares Python 3.10 or
-newer; other Python versions and operating systems depend on compatible OCR
-wheels. You can choose another installed interpreter with
-`OCR_PYTHON=python3.12 bash setup_laptop.sh --paddle`.
+### 3. Read the crop and retain the evidence
 
-### Open a ready-made review
+![Enlarged final account crop showing iltalehti and the Follow control](visuals/ROI_03_account_text.png)
 
-The repository includes the real sample's PaddleOCR output, so you can try the
-review without running OCR or downloading model weights. After setup:
+OCR reads this crop. Candidate filtering removes common interface text such as
+`Follow` and `Following`, while preserving uncertain readings for review. If no
+profile circle is found, that sampled frame supplies no OCR crop; the review
+still keeps the full frame where it can be decoded.
 
-```bash
-.venv/bin/ig-tk-accnames-ocr review examples/review_demo
-```
+TikTok uses a fixed lower-left crop, initially
+`(x=0, y=650, width=270, height=230)`. **The TikTok layout is experimental**, so
+TikTok results are flagged for review. It does not use the Reels circle detector.
 
-The original reading is `iltalehti`. Inspect the frames, leave the name unchanged
-and **Mark as reviewed** checked, then click **Save changes**. The page should
-show **Confirmed**. Download Excel and check the `final_names`
-column, or open `examples/review_demo/reviewed.xlsx` directly.
+## Sampling, votes and frame evidence
 
-### Use your own clip
+![Black-and-white LaTeX workflow from clips and crop selection through OCR, review and Excel](visuals/OCR_Workflow.png)
 
-```bash
-.venv/bin/python run_laptop_test.py \
-  --engine paddle \
-  --lang en de pl bg \
-  --layout tiktok \
-  --video "/path/to/your/clip.mp4"
-```
+For each clip, the pipeline:
 
-Use `--layout reels` for Instagram Reels. The laptop test samples approximately
-**2 frames per second**, stops a direction once a candidate receives **3 votes**,
-and attempts at most **12 frames per direction**. These settings make it quick
-to check installation and crops. They are not an accuracy guarantee.
+1. Samples frames from the beginning and reads the account crop.
+2. Counts each candidate once per frame and stops when the leading candidate
+   reaches the vote threshold, or the sample limit/end is reached.
+3. Repeats from the end of the clip toward the beginning.
+4. Compares the leading candidates from both directions.
+5. Saves independent review frames at the six requested time points.
 
-Add `--no-review` to finish after writing the results, or `--no-open` to run the
-review server without opening a browser automatically.
+`agreement` means the retained readings match across the two passes. `similar`
+means their text is similar enough for pairing; `disagreement` leaves unmatched
+candidates. `one_sided` and `no_text` indicate a reading in only one direction or
+neither. Multiple candidates, low support and decoding failures also trigger
+review flags. **Agreement measures repeatability, not whether the account is
+correct.**
 
-## Process a folder
-
-This example processes the TikTok clips in the laptop folder used for testing,
-including its subfolders. It enables ten European language groups plus
-English; replace the language list with `--lang europe` for the broader preset:
-
-```bash
-OCR_RUN="results/tiktok_$(date +%Y%m%d_%H%M%S)"
-
-OMP_NUM_THREADS=1 MKL_NUM_THREADS=4 \
-.venv/bin/ig-tk-accnames-ocr run \
-  "/home/vaibhavagarwal/Downloads/video_TK_clips" \
-  --output "$OCR_RUN" \
-  --recursive \
-  --layout tiktok \
-  --engine paddle \
-  --lang en bg hr fr hu fi sv de pl es pt \
-  --model-dir models \
-  --sample-fps 2 \
-  --min-votes 3 \
-  --vote-margin 0 \
-  --max-samples 12 \
-  --screenshots \
-  --excel
-
-.venv/bin/ig-tk-accnames-ocr review "$OCR_RUN"
-```
-
-Run the final command in the same terminal so `$OCR_RUN` still points to that
-run. Each run needs a **new output directory**; the package refuses to overwrite
-an existing one.
-
-Clips are processed one after another, with the OCR reader loaded once per job.
-Filenames are sorted naturally, so `clip_2` precedes `clip_10`. A failed clip gets
-an error row and processing continues. If you interrupt processing with Ctrl+C,
-completed clips are exported.
-
-**Twenty clips produce one review page and one workbook with twenty result rows.**
-Saving a correction updates that clip's row in the shared `reviewed.xlsx`.
-
-Supported extensions are `.mp4`, `.avi`, `.mov`, `.mkv`, `.flv`, `.wmv`, `.m4v`
-and `.webm`; OpenCV must also be able to decode the particular file's codec.
-For a folder of Reels, change the input path and use `--layout reels`.
+The 25%, 50% and 75% frames are **time quartiles**. They are not confidence
+percentiles or extra OCR votes. Fixed times outside a short clip are shown as
+unavailable; nearby requested times can resolve to the same frame. Frame timing
+uses the video FPS and frame count, so it assumes constant-frame-rate timing.
+Full-frame images retain the original video dimensions; OCR crops use the working
+resolution.
 
 ## Review and Excel
+
+**IG/TK Review** is the local browser interface. Each clip has its own evidence
+and saved decision, while the whole run shares one Excel workbook.
 
 1. Compare the candidate names with the account crops and full frames. Click a
    full-frame thumbnail to enlarge it.
@@ -227,7 +173,222 @@ saved review state.
 
 The complete saved review is shown in the screenshot at the top of this README.
 
-### Reopen an existing run or upgrade the interface
+## Installation
+
+### Install the command directly from GitHub
+
+For your own clips, you can install the package without keeping a repository
+checkout. The command below targets **v0.5.0**; use it after that tag is published
+on the [GitHub Releases page](https://github.com/econvaibhav/IG-TK-AccNames-OCR/releases).
+A local checkout can be installed immediately using the instructions below.
+
+On Fedora, create a Python 3.12 environment and select the Paddle extra:
+
+```bash
+sudo dnf install -y git python3.12
+python3.12 -m venv .venv
+.venv/bin/python -m pip install --upgrade pip
+.venv/bin/python -m pip install "ig-tk-accnames-ocr[paddle] @ git+https://github.com/econvaibhav/IG-TK-AccNames-OCR.git@v0.5.0"
+.venv/bin/ig-tk-accnames-ocr --version
+.venv/bin/ig-tk-accnames-ocr --help
+```
+
+This installs the `ig-tk-accnames-ocr` command and review assets. Use its `run`
+and `review` commands with your own video and result paths, as shown below.
+The installed package does not include the sample video or `run_laptop_test.py`;
+clone the repository to try the complete example.
+
+The release workflow builds a wheel and source archive from a version tag and
+attaches them to the GitHub release. The wheel contains the package and browser
+assets; the source archive also includes development files and helper scripts.
+Clone the repository when you want the bundled sample video.
+
+### Choose the dependencies you need
+
+| Installation from a local checkout | What it includes |
+| --- | --- |
+| `python -m pip install .` | Video utilities, browser review and Excel support; no OCR engine. |
+| `python -m pip install ".[paddle]"` | The base package plus PaddleOCR and PaddlePaddle. |
+| `python -m pip install ".[easyocr]"` | The base package plus EasyOCR and its dependencies. |
+
+Choose an OCR extra before running fresh OCR. The base package is sufficient for
+opening an existing results folder and saving reviews. The old `[excel]` extra
+remains accepted, but Excel dependencies are now included in the base package.
+Use `-e` before the local path when you want source edits to apply immediately.
+For example, `.venv/bin/python -m pip install -e ".[paddle]"` installs a checkout
+for development with Paddle support.
+
+### Clone and try the included example
+
+Clone the GitHub repository for the included video, review demo and helper
+scripts. On Fedora:
+
+```bash
+sudo dnf install -y git python3.12
+git clone https://github.com/econvaibhav/IG-TK-AccNames-OCR.git
+cd IG-TK-AccNames-OCR
+bash setup_laptop.sh --paddle
+.venv/bin/python run_laptop_test.py --engine paddle --lang en fi
+```
+
+If you downloaded the project as a ZIP, extract it, open a terminal inside
+`IG-TK-AccNames-OCR`, and start with `bash setup_laptop.sh --paddle`.
+The installed package is `ig-tk-accnames-ocr` (version **0.5.0**), and its command
+is `.venv/bin/ig-tk-accnames-ocr`.
+
+The setup script creates or reuses `.venv` and installs the package with the
+selected OCR engine. `--paddle` installs PaddleOCR and PaddlePaddle without
+requiring EasyOCR. An existing environment keeps packages already installed.
+The first OCR run downloads model weights into `models/`. Later runs reuse them. OCR inference and review run on
+your computer.
+
+The included `examples/iltalehti_reel.mp4` is a real **50.9-second Iltalehti Reel**
+from a Finnish news-media account. The test
+creates a new `results/laptop_...` folder and opens its review page. Keep the
+terminal open while reviewing. If the browser does not open, use the
+`http://127.0.0.1:.../` address printed in the terminal. Press **Ctrl+C** to stop the
+server; saved reviews remain on disk.
+
+To choose EasyOCR instead, the default setup installs EasyOCR with CPU
+PyTorch and torchvision:
+
+```bash
+bash setup_laptop.sh
+.venv/bin/python run_laptop_test.py --lang en
+```
+
+Python 3.12 on Linux CPU is the tested setup. The package declares Python 3.10 or
+newer; other Python versions and operating systems depend on compatible OCR
+wheels. You can choose another installed interpreter with
+`OCR_PYTHON=python3.12 bash setup_laptop.sh --paddle`.
+
+### Open a ready-made review
+
+The repository includes the real sample's PaddleOCR output, so you can try the
+review without running OCR or downloading model weights. After setup:
+
+```bash
+.venv/bin/ig-tk-accnames-ocr review examples/review_demo
+```
+
+For a review-only installation in a fresh checkout, use:
+
+```bash
+python3.12 -m venv .venv
+.venv/bin/python -m pip install .
+.venv/bin/ig-tk-accnames-ocr review examples/review_demo
+```
+
+The original reading is `iltalehti`. Inspect the frames, leave the name unchanged
+and **Mark as reviewed** checked, then click **Save changes**. The page should
+show **Confirmed**. Download Excel and check the `final_names`
+column, or open `examples/review_demo/reviewed.xlsx` directly.
+
+## Run a clip
+
+The installed command works with one video as well as folders:
+
+```bash
+OCR_RUN="results/clip_$(date +%Y%m%d_%H%M%S)"
+.venv/bin/ig-tk-accnames-ocr run "/path/to/your/clip.mp4" \
+  --output "$OCR_RUN" --engine paddle --lang en de pl bg \
+  --layout tiktok --model-dir models \
+  --sample-fps 2 --min-votes 3 --vote-margin 0 --max-samples 12 \
+  --screenshots --excel
+.venv/bin/ig-tk-accnames-ocr review "$OCR_RUN"
+```
+
+Use `--layout reels` for Instagram Reels. These quick-test settings sample
+approximately **2 frames per second**, stop a direction once a candidate receives
+**3 votes**, and attempt at most **12 frames per direction**. They make it quick
+to check installation and crops; they are not an accuracy guarantee.
+
+The checkout's `run_laptop_test.py` helper uses the same quick-test settings and
+opens the review automatically. Add `--no-review` to that helper to finish after
+writing the results, or `--no-open` to run its review server without opening a
+browser automatically.
+
+## Process a folder
+
+This example processes the TikTok clips in the laptop folder used for testing,
+including its subfolders. It enables ten European language groups plus
+English; replace the language list with `--lang europe` for the broader preset:
+
+```bash
+OCR_RUN="results/tiktok_$(date +%Y%m%d_%H%M%S)"
+
+OMP_NUM_THREADS=1 MKL_NUM_THREADS=4 \
+.venv/bin/ig-tk-accnames-ocr run \
+  "/home/vaibhavagarwal/Downloads/video_TK_clips" \
+  --output "$OCR_RUN" \
+  --recursive \
+  --layout tiktok \
+  --engine paddle \
+  --lang en bg hr fr hu fi sv de pl es pt \
+  --model-dir models \
+  --sample-fps 2 \
+  --min-votes 3 \
+  --vote-margin 0 \
+  --max-samples 12 \
+  --screenshots \
+  --excel
+
+.venv/bin/ig-tk-accnames-ocr review "$OCR_RUN"
+```
+
+Run the final command in the same terminal so `$OCR_RUN` still points to that
+run. Each run needs a **new output directory**; the package refuses to overwrite
+an existing one.
+
+Clips are processed one after another, with the OCR reader loaded once per job.
+Filenames are sorted naturally, so `clip_2` precedes `clip_10`. A failed clip gets
+an error row and processing continues. If you interrupt processing with Ctrl+C,
+completed clips are exported.
+
+**Twenty clips produce one review page and one workbook with twenty result rows.**
+Saving a correction updates that clip's row in the shared `reviewed.xlsx`.
+
+Supported extensions are `.mp4`, `.avi`, `.mov`, `.mkv`, `.flv`, `.wmv`, `.m4v`
+and `.webm`; OpenCV must also be able to decode the particular file's codec.
+For a folder of Reels, change the input path and use `--layout reels`.
+
+## Crop and sampling settings
+
+### Adjust a crop
+
+Use `--roi x,y,width,height` with `--layout tiktok` or `--layout fixed`:
+
+```bash
+.venv/bin/python run_laptop_test.py \
+  --video "/path/to/tiktok_clip.mp4" \
+  --engine paddle --lang en de pl bg \
+  --layout tiktok --roi 0,600,440,280
+```
+
+This is an example wider crop, not a universal TikTok setting. Choose coordinates
+that include the account without unnecessarily including captions or comments.
+Use `--layout fixed --roi ...` for a fixed Instagram crop; fixed mode retains
+Instagram-style candidate filtering. For the Reels circle-search strip, the main
+CLI also accepts `--circle-roi x,y,width,height`.
+
+### Adjust processing depth
+
+| Option | Main CLI default | Effect |
+| --- | --- | --- |
+| `--sample-fps` | `20` | Approximate sampling rate per direction; cannot exceed available frames. |
+| `--min-votes` | `11` | Stop a direction when a candidate reaches this many supporting frames. |
+| `--vote-margin` | `3` | Retain candidates within this many votes of the leader. |
+| `--max-samples` | `0` | Limit attempted frames per direction; `0` means no sample cap. |
+| `--min-confidence` | `0` | Discard detections below this OCR confidence. |
+| `--similarity` | `0.8` | Threshold for pairing candidate text between directions. |
+| `--min-duration` | `0` | Skip clips shorter than this many seconds. |
+
+The folder example uses the faster laptop settings explicitly. For a more
+thorough pass, remove those four sampling/voting overrides to use the main CLI
+defaults. More sampled frames can help with transient overlays or motion, but
+cannot repair an incorrect crop or unsupported script.
+
+## Reopen a review or update the package
 
 Stop an old review server with Ctrl+C. From the updated project folder, open the
 existing results using its full path:
@@ -243,8 +404,9 @@ update.** Keep the entire run folder, including its screenshots, together when
 moving it. Opening `review.html` directly gives a preview; saving requires the
 local server command above.
 
-When updating the package itself, extract or clone the new version into its own
-folder and run setup there. Existing result folders can stay where they are.
+When updating a checkout, install it again with the same OCR extra or rerun its
+setup script. For a direct GitHub installation, rerun the selected installation
+command with `--upgrade`. Existing result folders can stay where they are.
 To recover text with a different language model or crop, process the original
 video again into a new output folder.
 
@@ -394,101 +556,6 @@ its input image. TikTok's visible account field may contain a display name with
 spaces, and the TikTok candidate filter preserves those. If the name is absent
 from the crop, adjust `--roi` while keeping `--layout tiktok`.
 
-## How the account crop works
-
-Every frame is resized to a **540 × 960** working image. Crop coordinates below
-refer to that resized image, not the original video resolution.
-
-### 1. Find the profile-circle area
-
-For Reels, the first region of interest (ROI) is a narrow strip on the lower
-left: `(x=10, y=560, width=69, height=250)`. The code searches for circular
-profile images inside it and selects the lowest detected circle.
-
-![First ROI: the lower-left profile-circle search area in the sample frame](visuals/ROI_01_profile_search.png)
-
-### 2. Crop the adjoining account text
-
-The second ROI starts beside the selected circle and measures **380 × 40**
-working pixels. Bounds checks keep it inside the image. In the sample's
-3-second frame, this produces `(x=75, y=751, width=380, height=40)`.
-
-![Second ROI: the selected profile circle and adjoining account-text crop](visuals/ROI_02_account_crop.png)
-
-### 3. Read the crop and retain the evidence
-
-![Enlarged final account crop showing iltalehti and the Follow control](visuals/ROI_03_account_text.png)
-
-OCR reads this crop. Candidate filtering removes common interface text such as
-`Follow` and `Following`, while preserving uncertain readings for review. If no
-profile circle is found, that sampled frame supplies no OCR crop; the review
-still keeps the full frame where it can be decoded.
-
-TikTok uses a fixed lower-left crop, initially
-`(x=0, y=650, width=270, height=230)`. **The TikTok layout is experimental**, so
-TikTok results are flagged for review. It does not use the Reels circle detector.
-
-### Adjust a crop
-
-Use `--roi x,y,width,height` with `--layout tiktok` or `--layout fixed`:
-
-```bash
-.venv/bin/python run_laptop_test.py \
-  --video "/path/to/tiktok_clip.mp4" \
-  --engine paddle --lang en de pl bg \
-  --layout tiktok --roi 0,600,440,280
-```
-
-This is an example wider crop, not a universal TikTok setting. Choose coordinates
-that include the account without unnecessarily including captions or comments.
-Use `--layout fixed --roi ...` for a fixed Instagram crop; fixed mode retains
-Instagram-style candidate filtering. For the Reels circle-search strip, the main
-CLI also accepts `--circle-roi x,y,width,height`.
-
-## Sampling, votes and frame evidence
-
-![Black-and-white LaTeX workflow from clips and crop selection through OCR, review and Excel](visuals/OCR_Workflow.png)
-
-For each clip, the pipeline:
-
-1. Samples frames from the beginning and reads the account crop.
-2. Counts each candidate once per frame and stops when the leading candidate
-   reaches the vote threshold, or the sample limit/end is reached.
-3. Repeats from the end of the clip toward the beginning.
-4. Compares the leading candidates from both directions.
-5. Saves independent review frames at the six requested time points.
-
-`agreement` means the retained readings match across the two passes. `similar`
-means their text is similar enough for pairing; `disagreement` leaves unmatched
-candidates. `one_sided` and `no_text` indicate a reading in only one direction or
-neither. Multiple candidates, low support and decoding failures also trigger
-review flags. **Agreement measures repeatability, not whether the account is
-correct.**
-
-The 25%, 50% and 75% frames are **time quartiles**. They are not confidence
-percentiles or extra OCR votes. Fixed times outside a short clip are shown as
-unavailable; nearby requested times can resolve to the same frame. Frame timing
-uses the video FPS and frame count, so it assumes constant-frame-rate timing.
-Full-frame images retain the original video dimensions; OCR crops use the working
-resolution.
-
-### Adjust processing depth
-
-| Option | Main CLI default | Effect |
-| --- | --- | --- |
-| `--sample-fps` | `20` | Approximate sampling rate per direction; cannot exceed available frames. |
-| `--min-votes` | `11` | Stop a direction when a candidate reaches this many supporting frames. |
-| `--vote-margin` | `3` | Retain candidates within this many votes of the leader. |
-| `--max-samples` | `0` | Limit attempted frames per direction; `0` means no sample cap. |
-| `--min-confidence` | `0` | Discard detections below this OCR confidence. |
-| `--similarity` | `0.8` | Threshold for pairing candidate text between directions. |
-| `--min-duration` | `0` | Skip clips shorter than this many seconds. |
-
-The folder example uses the faster laptop settings explicitly. For a more
-thorough pass, remove those four sampling/voting overrides to use the main CLI
-defaults. More sampled frames can help with transient overlays or motion, but
-cannot repair an incorrect crop or unsupported script.
-
 ## Files in a run
 
 | File or folder | Purpose |
@@ -527,18 +594,32 @@ This checks model selection and inference together; it does not measure accuracy
 for all 32 language/script selections. The automated suite currently has
 **37 passing tests**.
 
-Run the automated checks after setup:
+From a checkout, install the base package and run the automated checks:
 
 ```bash
+.venv/bin/python -m pip install -e .
 .venv/bin/python -m unittest discover -s tests -v
 .venv/bin/python -m pip check
 ```
+
+To build the wheel and source archive locally:
+
+```bash
+.venv/bin/python -m pip install build
+.venv/bin/python -m build
+```
+
+The build files are written to `dist/`. Install `".[paddle]"` or `".[easyocr]"`
+when you also want to run a model; the unit tests need neither
+engine nor downloaded model weights.
 
 The tests cover sampling and voting, language routing, mixed-model duplicate
 readings, saved corrections and reopening, unchanged Unicode/display names,
 draft and unreadable decisions, Excel failures, stale review revisions, and
 short-clip frame bounds. Model weights are not required for these unit tests.
-GitHub Actions runs the same tests on Python 3.10 and 3.12 and builds a wheel.
+GitHub Actions runs the same tests on Python 3.10 and 3.12 and builds the package.
+The separate release workflow attaches distribution files to a tagged GitHub
+release.
 The supplied Paddle adapter was checked with PaddleOCR 3.7.0 and PaddlePaddle
 3.3.1 on Linux CPU; MKL-DNN is disabled because its accelerated path failed on
 the test runtime. GPU Paddle inference is not enabled by this setup.
@@ -566,36 +647,26 @@ To see all options:
 .venv/bin/ig-tk-accnames-ocr review --help
 ```
 
-## GitHub setup
-
-The repository is named **IG-TK-AccNames-OCR**. The detailed
-[GitHub setup guide](docs/GITHUB_SETUP.md) covers creating or connecting the
-repository and uploading the prepared project. For normal use, clone it with the
-quick-start command above and keep using the same package command after setup.
-
 ## Repository guide
 
 | Location | Contents |
 | --- | --- |
-| `instagram_ocr/core.py` | Configuration, candidate filtering, votes and comparisons. |
-| `instagram_ocr/vision.py` | Video access, crops and reader selection. |
-| `instagram_ocr/engines.py` | Paddle models and normalized detections. |
-| `instagram_ocr/languages.py` | Language codes, aliases, European presets and engine compatibility checks. |
-| `instagram_ocr/pipeline.py` | Forward/reverse scans and review frames. |
-| `instagram_ocr/files.py` | Video discovery, manifests and original tabular results. |
-| `instagram_ocr/review.py` | Local server, durable review state and Excel refresh. |
-| `instagram_ocr/review_page.py`, `instagram_ocr/static/` | Review HTML, CSS and browser behaviour. |
-| `instagram_ocr/excel.py` | Workbook formatting and embedded frame crops. |
+| `ig_tk_ocr/core.py` | Configuration, candidate filtering, votes and comparisons. |
+| `ig_tk_ocr/vision.py` | Video access, crops and reader selection. |
+| `ig_tk_ocr/engines.py` | Paddle models and normalized detections. |
+| `ig_tk_ocr/languages.py` | Language codes, aliases, European presets and engine compatibility checks. |
+| `ig_tk_ocr/pipeline.py` | Forward/reverse scans and review frames. |
+| `ig_tk_ocr/files.py` | Video discovery, manifests and original tabular results. |
+| `ig_tk_ocr/review.py` | Local server, durable review state and Excel refresh. |
+| `ig_tk_ocr/review_page.py`, `ig_tk_ocr/static/` | Review HTML, CSS and browser behaviour. |
+| `ig_tk_ocr/excel.py` | Workbook formatting and embedded frame crops. |
 | `examples/` | The real sample clip and a ready-made review. |
 | `tests/` | Automated checks. |
 | `visuals/` | LaTeX diagram, rendered figures and crop examples. |
 | `legacy/` | Nine original scripts retained as references; use the package for current runs. |
-| `docs/GITHUB_SETUP.md` | Step-by-step GitHub repository setup and upload instructions. |
 
-The internal Python module remains `instagram_ocr` for compatibility with earlier
-imports and `python -m instagram_ocr` commands. The current project, installed
-package and CLI names are **IG-TK-AccNames-OCR**, `ig-tk-accnames-ocr` and
-`ig-tk-accnames-ocr`, respectively.
+The Python package is `ig_tk_ocr`; you can also run it with
+`python -m ig_tk_ocr`. The installed command is `ig-tk-accnames-ocr`.
 
 The `legacy` scripts contain their original fixed paths, dependencies and run
 settings. Their individual roles are described in [legacy/README.md](legacy/README.md).
