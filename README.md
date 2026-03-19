@@ -592,7 +592,7 @@ recognizers: synthetic `Новини България` (Bulgarian), `Νέα Ευ
 Conflicting readings from other script models remained available for review.
 This checks model selection and inference together; it does not measure accuracy
 for all 32 language/script selections. The automated suite currently has
-**37 passing tests**.
+**40 passing tests**.
 
 From a checkout, install the base package and run the automated checks:
 
@@ -618,6 +618,8 @@ readings, saved corrections and reopening, unchanged Unicode/display names,
 draft and unreadable decisions, Excel failures, stale review revisions, and
 short-clip frame bounds. Model weights are not required for these unit tests.
 GitHub Actions runs the same tests on Python 3.10 and 3.12 and builds the package.
+The built wheel is also installed in a clean environment outside the checkout;
+checks exercise its command, bundled browser assets, review saving and Excel download.
 The separate release workflow attaches distribution files to a tagged GitHub
 release.
 The supplied Paddle adapter was checked with PaddleOCR 3.7.0 and PaddlePaddle

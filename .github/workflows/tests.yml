@@ -2,7 +2,9 @@ name: Python checks
 
 on:
   push:
+    branches: ['**']
   pull_request:
+  workflow_call:
 
 permissions:
   contents: read
@@ -11,22 +13,73 @@ jobs:
   tests:
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         python-version: ['3.10', '3.12']
     steps:
       - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
       - uses: actions/setup-python@v7
         with:
           python-version: ${{ matrix.python-version }}
           cache: pip
-      - name: Install CPU dependencies
+      - name: Install the base package without OCR frameworks
         run: |
           python -m pip install --upgrade pip
-          python -m pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
-          python -m pip install -e '.[excel]'
-      - name: Check package dependencies
-        run: python -m pip check
+          python -m pip install .
+          python -m pip check
       - name: Run tests without model downloads
         run: python -m unittest discover -s tests -v
-      - name: Build a wheel
-        run: python -m pip wheel --no-deps --wheel-dir dist .
+
+  distribution:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+          cache: pip
+      - name: Build and check wheel and source distribution
+        run: |
+          python -m pip install --upgrade pip build twine
+          python -m build
+          python -m twine check --strict dist/*
+      - name: Install only the wheel in a clean environment
+        run: |
+          python -m venv "$RUNNER_TEMP/wheel-env"
+          "$RUNNER_TEMP/wheel-env/bin/python" -m pip install dist/*.whl
+          "$RUNNER_TEMP/wheel-env/bin/python" -m pip check
+      - name: Check the installed version and optional frameworks
+        env:
+          RELEASE_TAG: ${{ github.ref_type == 'tag' && github.ref_name || '' }}
+        run: |
+          "$RUNNER_TEMP/wheel-env/bin/python" -I - <<'PY'
+          import importlib.util
+          from importlib.metadata import version
+          import os
+          installed = version('ig-tk-accnames-ocr')
+          tag = os.environ['RELEASE_TAG']
+          if tag and tag != 'v' + installed:
+              raise SystemExit(f'Tag {tag} does not match package version {installed}')
+          for framework in ('torch', 'easyocr', 'paddle', 'paddleocr'):
+              if importlib.util.find_spec(framework) is not None:
+                  raise SystemExit(f'Base install unexpectedly includes {framework}')
+          print(f'Checked base wheel {installed}')
+          PY
+      - name: Test the installed wheel outside the checkout
+        run: |
+          OCR_SMOKE_DIR="$(mktemp -d)"
+          cd "$OCR_SMOKE_DIR"
+          "$RUNNER_TEMP/wheel-env/bin/python" -I "$GITHUB_WORKSPACE/tests/test_distribution.py"
+      - name: Generate release checksums
+        working-directory: dist
+        run: sha256sum *.whl *.tar.gz > SHA256SUMS
+      - uses: actions/upload-artifact@v7
+        with:
+          name: python-distributions
+          path: dist/
+          if-no-files-found: error
+          retention-days: 14
