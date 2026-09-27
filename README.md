@@ -152,11 +152,9 @@ The complete saved review is shown in the screenshot at the top of this README.
 ### Install the command directly from GitHub
 
 For your own clips, you can install the package without keeping a repository
-checkout. The command below targets **v0.5.0**; use it after that tag is published
-on the [GitHub Releases page](https://github.com/econvaibhav/IG-TK-AccNames-OCR/releases).
-A local checkout can be installed immediately using the instructions below.
+checkout. 
 
-On Fedora, create a Python 3.12 environment and select the Paddle extra:
+On Fedora (What I use, should be similar in most other), create a Python 3.12 environment and select the Paddle extra:
 
 ```bash
 sudo dnf install -y git python3.12
@@ -172,11 +170,6 @@ and `review` commands with your own video and result paths, as shown below.
 The installed package does not include the sample video or `run_laptop_test.py`;
 clone the repository to try the complete example.
 
-The release workflow builds a wheel and source archive from a version tag and
-attaches them to the GitHub release. The wheel contains the package and browser
-assets; the source archive also includes development files and helper scripts.
-Clone the repository when you want the bundled sample video.
-
 ### Choose the dependencies you need
 
 | Installation from a local checkout | What it includes |
@@ -186,11 +179,7 @@ Clone the repository when you want the bundled sample video.
 | `python -m pip install ".[easyocr]"` | The base package plus EasyOCR and its dependencies. |
 
 Choose an OCR extra before running fresh OCR. The base package is sufficient for
-opening an existing results folder and saving reviews. The old `[excel]` extra
-remains accepted, but Excel dependencies are now included in the base package.
-Use `-e` before the local path when you want source edits to apply immediately.
-For example, `.venv/bin/python -m pip install -e ".[paddle]"` installs a checkout
-for development with Paddle support.
+opening an existing results folder and saving reviews. 
 
 ### Clone and try the included example
 
@@ -205,23 +194,9 @@ bash setup_laptop.sh --paddle
 .venv/bin/python run_laptop_test.py --engine paddle --lang en fi
 ```
 
-If you downloaded the project as a ZIP, extract it, open a terminal inside
-`IG-TK-AccNames-OCR`, and start with `bash setup_laptop.sh --paddle`.
-The installed package is `ig-tk-accnames-ocr` (version **0.5.0**), and its command
-is `.venv/bin/ig-tk-accnames-ocr`.
-
-The setup script creates or reuses `.venv` and installs the package with the
-selected OCR engine. `--paddle` installs PaddleOCR and PaddlePaddle without
-requiring EasyOCR. An existing environment keeps packages already installed.
-The first OCR run downloads model weights into `models/`. Later runs reuse them. OCR inference and review run on
-your computer.
-
 The included `examples/iltalehti_reel.mp4` is a real **50.9-second Iltalehti Reel**
 from a Finnish news-media account. The test
-creates a new `results/laptop_...` folder and opens its review page. Keep the
-terminal open while reviewing. If the browser does not open, use the
-`http://127.0.0.1:.../` address printed in the terminal. Press **Ctrl+C** to stop the
-server; saved reviews remain on disk.
+creates a new `results/laptop_...` folder and opens its review page. 
 
 To choose EasyOCR instead, the default setup installs EasyOCR with CPU
 PyTorch and torchvision:
@@ -230,11 +205,6 @@ PyTorch and torchvision:
 bash setup_laptop.sh
 .venv/bin/python run_laptop_test.py --lang en
 ```
-
-Python 3.12 on Linux CPU is the tested setup. The package declares Python 3.10 or
-newer; other Python versions and operating systems depend on compatible OCR
-wheels. You can choose another installed interpreter with
-`OCR_PYTHON=python3.12 bash setup_laptop.sh --paddle`.
 
 ### Open a ready-made review
 
@@ -253,11 +223,6 @@ python3.12 -m venv .venv
 .venv/bin/ig-tk-accnames-ocr review examples/review_demo
 ```
 
-The original reading is `iltalehti`. Inspect the frames, leave the name unchanged
-and **Mark as reviewed** checked, then click **Save changes**. The page should
-show **Confirmed**. Download Excel and check the `final_names`
-column, or open `examples/review_demo/reviewed.xlsx` directly.
-
 ## Run a clip
 
 The installed command works with one video as well as folders:
@@ -274,11 +239,9 @@ OCR_RUN="results/clip_$(date +%Y%m%d_%H%M%S)"
 
 Use `--layout reels` for Instagram Reels. These quick-test settings sample
 approximately **2 frames per second**, stop a direction once a candidate receives
-**3 votes**, and attempt at most **12 frames per direction**. They make it quick
-to check installation and crops; they are not an accuracy guarantee.
+**3 votes**, and attempt at most **12 frames per direction**. 
 
-The checkout's `run_laptop_test.py` helper uses the same quick-test settings and
-opens the review automatically. Add `--no-review` to that helper to finish after
+Add `--no-review` to that helper to finish after
 writing the results, or `--no-open` to run its review server without opening a
 browser automatically.
 
@@ -293,7 +256,7 @@ OCR_RUN="results/tiktok_$(date +%Y%m%d_%H%M%S)"
 
 OMP_NUM_THREADS=1 MKL_NUM_THREADS=4 \
 .venv/bin/ig-tk-accnames-ocr run \
-  "/home/vaibhavagarwal/Downloads/video_TK_clips" \
+  "/home/name/Downloads/video_TK_clips" \
   --output "$OCR_RUN" \
   --recursive \
   --layout tiktok \
@@ -310,21 +273,8 @@ OMP_NUM_THREADS=1 MKL_NUM_THREADS=4 \
 .venv/bin/ig-tk-accnames-ocr review "$OCR_RUN"
 ```
 
-Run the final command in the same terminal so `$OCR_RUN` still points to that
-run. Each run needs a **new output directory**; the package refuses to overwrite
-an existing one.
-
-Clips are processed one after another, with the OCR reader loaded once per job.
-Filenames are sorted naturally, so `clip_2` precedes `clip_10`. A failed clip gets
-an error row and processing continues. If you interrupt processing with Ctrl+C,
-completed clips are exported.
-
-**Twenty clips produce one review page and one workbook with twenty result rows.**
-Saving a correction updates that clip's row in the shared `reviewed.xlsx`.
-
 Supported extensions are `.mp4`, `.avi`, `.mov`, `.mkv`, `.flv`, `.wmv`, `.m4v`
-and `.webm`; OpenCV must also be able to decode the particular file's codec.
-For a folder of Reels, change the input path and use `--layout reels`.
+and `.webm`
 
 ## Crop and sampling settings
 
@@ -339,8 +289,8 @@ Use `--roi x,y,width,height` with `--layout tiktok` or `--layout fixed`:
   --layout tiktok --roi 0,600,440,280
 ```
 
-This is an example wider crop, not a universal TikTok setting. Choose coordinates
-that include the account without unnecessarily including captions or comments.
+This is an example wider crop
+
 Use `--layout fixed --roi ...` for a fixed Instagram crop; fixed mode retains
 Instagram-style candidate filtering. For the Reels circle-search strip, the main
 CLI also accepts `--circle-roi x,y,width,height`.
@@ -356,33 +306,6 @@ CLI also accepts `--circle-roi x,y,width,height`.
 | `--min-confidence` | `0` | Discard detections below this OCR confidence. |
 | `--similarity` | `0.8` | Threshold for pairing candidate text between directions. |
 | `--min-duration` | `0` | Skip clips shorter than this many seconds. |
-
-The folder example uses the faster laptop settings explicitly. For a more
-thorough pass, remove those four sampling/voting overrides to use the main CLI
-defaults. More sampled frames can help with transient overlays or motion, but
-cannot repair an incorrect crop or unsupported script.
-
-## Reopen a review or update the package
-
-Stop an old review server with Ctrl+C. From the updated project folder, open the
-existing results using its full path:
-
-```bash
-.venv/bin/ig-tk-accnames-ocr review \
-  "/path/to/previous/results/tiktok_YOUR_RUN_FOLDER"
-```
-
-This regenerates the interface using the installed code and reloads saved
-`review_state.json` decisions. **You do not need to repeat OCR for a review UI
-update.** Keep the entire run folder, including its screenshots, together when
-moving it. Opening `review.html` directly gives a preview; saving requires the
-local server command above.
-
-When updating a checkout, install it again with the same OCR extra or rerun its
-setup script. For a direct GitHub installation, rerun the selected installation
-command with `--upgrade`. Existing result folders can stay where they are.
-To recover text with a different language model or crop, process the original
-video again into a new output folder.
 
 ## Languages and OCR models
 
@@ -405,22 +328,6 @@ Common European country/language selections, plus English:
 | Spain | Spanish | `es` |
 | Portugal | Portuguese | `pt` |
 
-These are language selections, not country filters. For example, a clip recorded
-in Finland can contain an English or Swedish account name. Select the languages
-that may appear in the visible account labels.
-
-To try all ten groups plus English on one clip:
-
-```bash
-.venv/bin/python run_laptop_test.py \
-  --video "/path/to/your/clip.mp4" \
-  --layout tiktok --engine paddle \
-  --lang en bg hr fr hu fi sv de pl es pt
-```
-
-That combination uses **two script recognizers**, not eleven separate models:
-PP-OCRv6 small for the Latin-script languages and the PP-OCRv5 mobile Cyrillic
-recognizer for Bulgarian. Both can also read English.
 
 ### European presets
 
@@ -437,98 +344,6 @@ The preset expands to these 32 language/script codes:
 ```text
 en bg hr fr hu fi sv de pl es pt el it nl da no cs sk sl ro et lv lt ga mt is uk ru rs_latin rs_cyrillic sq tr
 ```
-
-It includes codes for the 24 official EU languages plus Norwegian, Icelandic,
-Ukrainian, Russian, Serbian in Latin and Cyrillic, Albanian and Turkish. It selects
-**three script recognizers**: Latin, Cyrillic and Greek. This is an OCR model
-selection shortcut; it does not translate names, identify countries or infer
-which languages are present in an individual clip.
-
-For a collection known to use Latin-script labels, `--lang europe-latin` removes
-`bg`, `el`, `uk`, `ru` and `rs_cyrillic` from that preset. It uses one PP-OCRv6
-recognizer and is a lighter option. Use the full `europe` preset when Bulgarian
-or other Cyrillic and Greek labels may occur.
-
-Other languages in these presets include:
-
-| Language | Code | Language | Code |
-| --- | --- | --- | --- |
-| Greek | `el` | Italian | `it` |
-| Dutch | `nl` | Danish | `da` |
-| Norwegian | `no` | Czech | `cs` |
-| Slovak | `sk` | Slovenian | `sl` |
-| Romanian | `ro` | Estonian | `et` |
-| Latvian | `lv` | Lithuanian | `lt` |
-| Irish | `ga` | Maltese | `mt` |
-| Icelandic | `is` | Ukrainian | `uk` |
-| Russian | `ru` | Serbian, Latin | `rs_latin` |
-| Serbian, Cyrillic | `rs_cyrillic` | Albanian | `sq` |
-| Turkish | `tr` | | |
-
-To print the supported codes and presets without processing a video or loading
-models:
-
-```bash
-.venv/bin/ig-tk-accnames-ocr --list-languages
-```
-
-The same flag also works after `run` or `batch`, and with
-`.venv/bin/python run_laptop_test.py --list-languages`.
-
-### How model selection works
-
-The Paddle adapter selects recognizers by the requested scripts. Adding a
-language code to a recognizer that cannot output that script would not recover
-the missing text; the adapter therefore loads the appropriate model explicitly.
-
-| Requested languages | Recognition model(s) used |
-| --- | --- |
-| `en`, `en de pl`, or `europe-latin` | `PP-OCRv6_small_rec` |
-| `en bg` | `cyrillic_PP-OCRv5_mobile_rec`, which also reads English |
-| `en bg hr fr hu fi sv de pl es pt` | PP-OCRv6 small **and** the Cyrillic PP-OCRv5 mobile recognizer |
-| `en el` | `el_PP-OCRv5_mobile_rec`, which also reads English |
-| `europe` | PP-OCRv6 small, Cyrillic PP-OCRv5 mobile and Greek PP-OCRv5 mobile |
-
-All Paddle routes use the PP-OCRv6 detector. `--paddle-size tiny` or `medium`
-changes the v6 detector and any v6 recognizer; the specialized v5 recognizers
-stay mobile. **Small** is the tested laptop preset.
-
-### Performance and mixed-script readings
-
-The eleven-language example runs each crop through two model
-pipelines; `europe` runs it through three. Detection is included in each pipeline,
-so this costs more time and memory than one script group. Adding more languages
-within the same script group does not create one model per language.
-
-Identical overlapping readings are combined; different readings are kept for
-review. A label still receives at most one vote per sampled frame, even when two
-models read it. Requested languages, expanded language codes and actual model
-names are recorded in `run.json`. Model sources accompany raw observations in
-`details.jsonl`.
-
-EasyOCR remains available with `--engine easyocr`, for combinations such as
-`--lang en pl` or `--lang en bg`. EasyOCR 1.7.2 does not list Finnish or Greek, and
-it cannot load every script combination together. Both European presets therefore
-require **`--engine paddle`**, including the Latin preset because it contains
-Finnish. An incompatible EasyOCR request reports the problem; it does not silently
-switch engines. `--list-languages` shows per-language engine support, and
-unsupported codes produce an explicit error.
-
-The listed languages describe configured model support. Recognition quality
-still depends on the crop, resolution, font, motion and visible text; these
-examples do not establish accuracy across an EU clip collection.
-
-### When a Bulgarian clip returns no text
-
-Use the new Cyrillic route and rerun that clip. The recognizer was checked with
-the synthetic text `Новини България`, which it read successfully. This confirms
-that the route can emit Bulgarian text; the particular Bulgarian video still
-needs to be tested.
-
-Also inspect the **crop**. A recognizer cannot read an account that lies outside
-its input image. TikTok's visible account field may contain a display name with
-spaces, and the TikTok candidate filter preserves those. If the name is absent
-from the crop, adjust `--roi` while keeping `--layout tiktok`.
 
 ## Files in a run
 
@@ -547,81 +362,6 @@ Excel is the review interface's only download format. The review no longer
 creates a `reviewed.csv` file; an old one from a previous version is not refreshed.
 The original OCR outputs are not overwritten by manual review.
 
-## Checks and examples
-
-On the included sample, the checked CPU runs produced:
-
-| Engine | Forward reading | Reverse reading | Visible label |
-| --- | --- | --- | --- |
-| EasyOCR 1.7.2 (`en`) | `iltalehti` · 3 votes | `iltalehti` · 3 votes | `iltalehti` |
-| PP-OCRv6 small (`en fi`) | `iltalehti` · 3 votes | `iltalehti` · 3 votes | `iltalehti` |
-
-Both runs report agreement with no automatic review flags. This is one worked
-example, not an accuracy benchmark; the review still lets you check and confirm
-the reading against the frames.
-
-The `europe` preset also passed a CPU integration check with all three actual
-recognizers: synthetic `Новини България` (Bulgarian), `Νέα Ευρώπη` (Greek) and
-`głos.polski` (Polish) were read correctly by their corresponding models.
-Conflicting readings from other script models remained available for review.
-This checks model selection and inference together; it does not measure accuracy
-for all 32 language/script selections. The automated suite currently has
-**40 passing tests**.
-
-From a checkout, install the base package and run the automated checks:
-
-```bash
-.venv/bin/python -m pip install -e .
-.venv/bin/python -m unittest discover -s tests -v
-.venv/bin/python -m pip check
-```
-
-To build the wheel and source archive locally:
-
-```bash
-.venv/bin/python -m pip install build
-.venv/bin/python -m build
-```
-
-The build files are written to `dist/`. Install `".[paddle]"` or `".[easyocr]"`
-when you also want to run a model; the unit tests need neither
-engine nor downloaded model weights.
-
-The tests cover sampling and voting, language routing, mixed-model duplicate
-readings, saved corrections and reopening, unchanged Unicode/display names,
-draft and unreadable decisions, Excel failures, stale review revisions, and
-short-clip frame bounds. Model weights are not required for these unit tests.
-GitHub Actions runs the same tests on Python 3.10 and 3.12 and builds the package.
-The built wheel is also installed in a clean environment outside the checkout;
-checks exercise its command, bundled browser assets, review saving and Excel download.
-The separate release workflow attaches distribution files to a tagged GitHub
-release.
-The supplied Paddle adapter was checked with PaddleOCR 3.7.0 and PaddlePaddle
-3.3.1 on Linux CPU; MKL-DNN is disabled because its accelerated path failed on
-the test runtime. GPU Paddle inference is not enabled by this setup.
-
-## Troubleshooting
-
-| What you see | What to do |
-| --- | --- |
-| A correct name previously failed handle validation | Run the updated review command on the existing results folder. Unicode display names, spaces and punctuation are now accepted. Leave Mark as reviewed checked and save. |
-| Bulgarian text returns no candidates | Use `--engine paddle --lang en bg`, or add `bg` to a mixed-language run, and process the original clip again. Inspect the account crop too. |
-| The account is outside the crop | Adjust the TikTok/fixed `--roi` or Reels `--circle-roi`, then rerun into a new output folder. |
-| A Reels file is marked `skipped_layout` | The filename guard treats names containing `video` but not `reel` as possible feed posts. For a known Reel, give the file a name containing `reel`; otherwise use an appropriate fixed crop. |
-| Save is unavailable when opening HTML | Start `.venv/bin/ig-tk-accnames-ocr review <run folder>`; direct HTML opening is preview-only. |
-| Excel cannot be refreshed | Close the workbook, then click Refresh Excel. Saved corrections remain in `review_state.json`. |
-| The review changed in another tab | Reload to see the latest saved revision before making another change. |
-| A review server already has the folder open | Use its existing browser tab, or stop that server before opening another. |
-| Output already exists | Choose a new output directory for each OCR run. Reopening a review uses its existing directory. |
-| Model downloads are unavailable | Download once with the chosen model/languages, then reuse the same cache with `--offline --model-dir models`. |
-
-To see all options:
-
-```bash
-.venv/bin/ig-tk-accnames-ocr --help
-.venv/bin/ig-tk-accnames-ocr run --help
-.venv/bin/ig-tk-accnames-ocr review --help
-```
 
 ## Repository guide
 
@@ -645,49 +385,7 @@ The Python package is `ig_tk_ocr`; you can also run it with
 `python -m ig_tk_ocr`. The installed command is `ig-tk-accnames-ocr`.
 
 The `legacy` scripts contain their original fixed paths, dependencies and run
-settings. Their individual roles are described in [legacy/README.md](legacy/README.md).
-
-### Folder manifests and array jobs
-
-The package can create one task per video folder for a Slurm array. First write a
-manifest:
-
-```bash
-.venv/bin/ig-tk-accnames-ocr manifest "/path/to/video/root" \
-  --output manifests/folders.json
-```
-
-Then process one listed folder, using one-based task IDs:
-
-```bash
-.venv/bin/ig-tk-accnames-ocr batch manifests/folders.json \
-  --task-id 1 --output results/array_run \
-  --layout tiktok --engine paddle --lang en de pl bg \
-  --model-dir models --screenshots --excel
-```
-
-Without `--task-id`, the command reads `SLURM_ARRAY_TASK_ID`. Each task writes to
-its own `task_00001`, `task_00002`, and so on, with its own workbook. A single
-recursive `run` is the simpler option when you want one combined laptop review.
-
-`--layout auto` infers platforms only from directory components named exactly
-`instagram` or `tiktok`, ignoring case. It does not infer them from abbreviations
-such as `video_TK_clips`; use an explicit layout for those folders.
-
-### Rebuild the figures
-
-The LaTeX source, PDF and PNG are included. LaTeX is not needed to run OCR.
-Open [visuals/OCR_Workflow.tex](visuals/OCR_Workflow.tex) in Overleaf, or compile
-locally with TikZ and the `standalone` document class installed:
-
-```bash
-pdflatex -interaction=nonstopmode -halt-on-error \
-  -output-directory visuals visuals/OCR_Workflow.tex
-.venv/bin/python visuals/render_rois.py
-```
-
-The second command recreates the crop illustrations from the sample video.
-The review screenshot shows the actual local interface.
+settings. 
 
 ## References
 
