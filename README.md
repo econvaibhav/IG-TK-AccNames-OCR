@@ -18,7 +18,7 @@ Swedish, German, Polish, Spanish and Portuguese, plus English. Use
 
 [How it works](#how-the-account-crop-works) · [Review and Excel](#review-and-excel) ·
 [Installation](#installation) · [Process a folder](#process-a-folder) ·
-[Languages](#languages-and-ocr-models) · [Troubleshooting](#troubleshooting)
+[Languages](#languages-and-ocr-models) 
 
 ## What it does
 
