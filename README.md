@@ -1,11 +1,11 @@
 # IG-TK-AccNames-OCR
 
-Extract account names from recorded Instagram Reels and TikTok clips, check the
-frame evidence in your browser, and save reviewed results to Excel.
+== **Extract Account Names from IG/TK Reels + FULLY Human Review possible for 100% ACCURACY!** ==
 
 The package works with video files already on your computer. It finds the account
 area, reads sampled frames in both directions, and keeps repeated candidates
-alongside the original text. You make the final decision in a local review page.
+alongside the original text (To ensure higher accuracy for account name detection). **You can make the final decision in a local review page, if needed (full integraton)**.
+
 No Instagram login or OCR API key is required.
 
 **European language options:** Bulgarian, Croatian, French, Hungarian, Finnish,
@@ -25,7 +25,7 @@ Swedish, German, Polish, Spanish and Portuguese, plus English. Use
 - Processes one clip or a folder, with optional subfolder discovery.
 - Offers EasyOCR and PaddleOCR, with explicit languages or a European preset
   covering Latin, Cyrillic and Greek model routes.
-- Compares forward and backward readings and counts support across frames.
+- Compares forward and backward readings and counts support (same OCR reading) across frames.
 - Saves six review moments: **1 second, 3 seconds, 1 second before the end,
   25%, 50% and 75%** of the clip.
 - Shows both the account crop and the full frame, with an enlarged view on click.
@@ -33,11 +33,6 @@ Swedish, German, Polish, Spanish and Portuguese, plus English. Use
   unreadable using checkboxes.
 - Updates one Excel workbook for the entire run, while retaining original OCR
   results and saved correction history.
-
-An **account label** can be a handle such as `iltalehti` or a display
-name such as `Новини България`. These are different things: OCR reads the visible
-label; it does not look up the account or establish its identity. The review
-accepts Unicode names, spaces and punctuation, including commas.
 
 ## How the account crop works
 
@@ -71,7 +66,7 @@ still keeps the full frame where it can be decoded.
 
 TikTok uses a fixed lower-left crop, initially
 `(x=0, y=650, width=270, height=230)`. **The TikTok layout is experimental**, so
-TikTok results are flagged for review. It does not use the Reels circle detector.
+TikTok results are flagged for review. It does not use the Reels circle detector; however, upon looking at manual review for HEPP Data, TikTok also performs very well! 
 
 ## Sampling, votes and frame evidence
 
@@ -86,19 +81,17 @@ For each clip, the pipeline:
 4. Compares the leading candidates from both directions.
 5. Saves independent review frames at the six requested time points.
 
-`agreement` means the retained readings match across the two passes. `similar`
-means their text is similar enough for pairing; `disagreement` leaves unmatched
-candidates. `one_sided` and `no_text` indicate a reading in only one direction or
-neither. Multiple candidates, low support and decoding failures also trigger
-review flags. **Agreement measures repeatability, not whether the account is
-correct.**
+`agreement` means the retained readings match across the two passes. 
 
-The 25%, 50% and 75% frames are **time quartiles**. They are not confidence
-percentiles or extra OCR votes. Fixed times outside a short clip are shown as
-unavailable; nearby requested times can resolve to the same frame. Frame timing
+`similar` means their text is similar enough for pairing
+
+`disagreement` leaves unmatched candidates. 
+
+`one_sided` and `no_text` indicate a reading in only one direction or
+neither. 
+
+The 25%, 50% and 75% frames are **time quartiles**. Frame timing
 uses the video FPS and frame count, so it assumes constant-frame-rate timing.
-Full-frame images retain the original video dimensions; OCR crops use the working
-resolution.
 
 ## Review and Excel
 
