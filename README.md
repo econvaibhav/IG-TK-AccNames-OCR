@@ -109,11 +109,6 @@ and saved decision, while the whole run shares one Excel workbook.
 5. Use **Download Excel** for the latest saved workbook. It is also written
    directly to the run folder as `reviewed.xlsx`.
 
-There is no need to invent an edit just to confirm a correct name. Nonempty names
-start with **Mark as reviewed** checked; the decision is only saved when you click
-**Save changes**. Leaving both checkboxes unchecked saves a draft and keeps the
-clip unresolved. The **Unresolved only** filter and search box help with larger
-runs.
 
 | Review status | Meaning | `final_names` | `needs_manual_review` |
 | --- | --- | --- | --- |
@@ -127,21 +122,7 @@ as a JSON list in the Excel cell, for example `["iltalehti"]`, so a
 clip can retain more than one account. Draft edits are saved in the review state
 but do not replace the original candidates in `final_names` until accepted.
 
-The workbook also includes notes, the last review timestamp, a revision number,
-original OCR fields, and the 3-second crop when available. Its header is frozen
-and filtering is enabled. Original `status` and `needs_review` describe the
-automatic OCR result; they remain unchanged after a human correction.
-
-Saved corrections go **from the review page to Excel**. Editing the workbook
-does not update the review, and corrections do not train or change the OCR model.
-If Excel or LibreOffice locks the file, close it and click **Refresh Excel**.
-The correction is saved before the workbook is refreshed, so an export error does
-not discard it.
-
 ### See the review steps
-
-These screenshots use the real `examples/iltalehti_reel.mp4` supplied with the
-project. They illustrate that sample's review, not a multilingual EU benchmark.
 
 **Before review.** The original PaddleOCR reading is `iltalehti`. The two
 passes agree; inspect the frame evidence to confirm the visible account name.
